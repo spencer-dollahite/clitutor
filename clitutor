@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-
+git pull https://github.com/spencer-dollahite/clitutor/
 clear
 echo " ██████╗██╗     ██╗████████╗██╗   ██╗████████╗ ██████╗ ██████╗ ";
 echo "██╔════╝██║     ██║╚══██╔══╝██║   ██║╚══██╔══╝██╔═══██╗██╔══██╗";
@@ -9,7 +9,14 @@ echo "██║     ██║     ██║   ██║   ██║   ██║ 
 echo "╚██████╗███████╗██║   ██║   ╚██████╔╝   ██║   ╚██████╔╝██║  ██║";
 echo " ╚═════╝╚══════╝╚═╝   ╚═╝    ╚═════╝    ╚═╝    ╚═════╝ ╚═╝  ╚═╝";
 echo
-echo "Welcome to clitutor! Type 'pwd' (without the quotes) below to see where you currently are."
+echo "Welcome to clitutor! You are on the cusp of an exciting journey."
+echo
+echo "Why learn the cli (Command Line Interface)?"
+echo
+echo "Both Windows and Linux/UNIX systems can be easily managed at scale via automation by using text-only commands rather than clicking around icons in a GUI (Graphical User Interface). Knowing your way around the CLI will let you operate expertly and efficiently around systems for both defensive and offensive operations."
+echo 
+echo "We will focus on non-Windows CLI. Over 90% of workloads on the internet/in 'the cloud' run on Linux/Unix systems, so this skillset is widely applicable when administering infrastructure."
+echo "Type 'pwd' (without the quotes) below to see where you currently are."
 printf "Hint: \e[4mp\e[0mrint \e[4mw\e[0mowrking \e[4md\e[0mirectory - you can think of a directory as the same thing as a folder\n\n"
 
 while true; do
@@ -145,6 +152,7 @@ while true; do
  fi
 done
 
+clear
 echo
 echo "Now, you'll be dropped out of this sandbox that is clitutor back into your proper environment. Start maneuvering around by doing listings and changing into other directories to gain some situational awareness of what is here."
 echo
