@@ -9,3 +9,11 @@ I recommend opening a separate terminal window in which to run commands while yo
 'man' stands for manual which is a program that provides local help documentation for many commands. Try 'man less' to show the manual/help docs for the less program. Take a few minutes to read over some of the info in there. 'man' will often use less as the pagination program, so you can move through the help docs as described above.
 
 Don't feel bad about using man to reference the myriad options for the thousands of commands you will eventually learn. Keeping all the flags and such in your mind for all time is tough. AI/LLMs are also very good at constructing CLI commands if you just describe what you want done. They may not be 100% perfect all the time, but you will find it covers a lot for you. We will proceed locally here, but you should feel free to take full advantage of online resources whenever desired.
+
+touch
+ls 
+cat
+> vs >>
+pipes
+&& vs ;
+echo

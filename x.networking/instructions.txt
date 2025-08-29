@@ -2,6 +2,9 @@ curl
 wget
 ip a s / ifconfig
 ping
+traceroute
 nslookup
 nmap
+nc
 tcpdump
+/etc/hosts / DNS
