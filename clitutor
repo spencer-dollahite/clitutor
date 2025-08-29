@@ -106,3 +106,44 @@ while true; do
   echo "That’s not quite right. Try typing: pwd"
  fi
 done
+
+echo "'.' refers to the current directory"
+echo "'..' refers to the parent directory"
+echo "'~' refers to the logged-in user's home directory"
+echo "'ls -a' will show you hidden files. Anything that starts with a '.' is hidden by default"
+echo "'cd ..' would move your working directory up one level to the parent"
+echo "'cd ../..' would take you up two levels. So on and so forth"
+echo
+echo "'cd ~' would take you to your home directory. 'cd' by itself will do the same thing."
+echo "'cd ~/<directory>' where <directory> is inside your home directory would take you to that path: /home/<user>/<directory>"
+echo 
+echo
+echo "show a listing, including hidden items, where you are now"
+
+while true; do
+ read -p "\$ " user_input
+ if [[ "$user_input" == "ls -a" ]]; then
+  ls -a
+  echo
+  break
+ else
+  echo "That’s not quite right. Try typing: pwd"
+ fi
+done
+
+echo "To view the contents of a text file, use 'less <filename>'"
+echo "Show the contents of the next-steps file"
+
+while true; do
+ read -p "\$ " user_input
+ if [[ "$user_input" == "less next-steps" ]]; then
+  less next-steps
+  echo
+  break
+ else
+  echo "That’s not quite right. Try typing: pwd"
+ fi
+done
+
+echo
+echo "Now, you'll be dropped out of this sandbox that is clitutor back into your proper environment. Start poking around by doing listings and changing into other directories to get familiar with what is here."

@@ -1,0 +1,5 @@
+Welcome to the beginning of the more open-ended clitutor! 
+
+You can page/scroll through content by using the 'f' (forward) and 'b' (back) keys. 
+
+You can start a text search by typing '/' followed by your search term. 
