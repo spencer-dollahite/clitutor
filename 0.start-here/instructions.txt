@@ -3,3 +3,7 @@ Welcome to the beginning of the more open-ended clitutor!
 You can page/scroll through content by using the 'f' (forward) and 'b' (back) keys. 
 
 You can start a text search by typing '/' followed by your search term. 
+
+I recommend opening a separate terminal window in which to run commands while you follow along here with the instructions.
+
+'man' stands for manual which is a program that provides local help documentation for many commands. Try 'man less' to show the manual/help docs for the less program. Take a few minutes to read over some of the info in there. 'man' will often use less as the pagination program, so you can move through the help docs as described above.
