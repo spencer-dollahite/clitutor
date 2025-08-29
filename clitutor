@@ -146,4 +146,8 @@ while true; do
 done
 
 echo
-echo "Now, you'll be dropped out of this sandbox that is clitutor back into your proper environment. Start poking around by doing listings and changing into other directories to get familiar with what is here."
+echo "Now, you'll be dropped out of this sandbox that is clitutor back into your proper environment. Start maneuvering around by doing listings and changing into other directories to gain some situational awareness of what is here."
+echo
+echo "You may notice filenames are case-sensitive. 'next-steps' is a real file. 'Next-steps' would be an entirely different file. It does not exist."
+echo
+echo "You may also find tab completion useful. After typing a few letters, hit the TAB key once. The word MAY auto-complete IF it is unique. If it is NOT unique, then you can hit the TAB key twice in quick succession. This should give you the options that start with the letters you have typed so far. You can then choose the next few letters to continue narrowing down the list until it IS unique in which case TAB will complete it. IF this behavior does not work on your system, then do some research online to determine how to install what is necessary on your system to get it working. It is a HUGE quality of life thing that you will want to be able to use."
