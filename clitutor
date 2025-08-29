@@ -15,6 +15,8 @@ echo
 echo "Both Windows and Linux/UNIX systems can be easily managed at scale via automation by using text-only commands rather than clicking around icons in a GUI (Graphical User Interface). Knowing your way around the CLI will let you operate expertly and efficiently around systems for both defensive and offensive operations."
 echo 
 echo "We will focus on non-Windows CLI. Over 90% of workloads on the internet/in 'the cloud' run on Linux/Unix systems, so this skillset is widely applicable when administering infrastructure."
+echo
+echo
 echo "Type 'pwd' (without the quotes) below to see where you currently are."
 printf "Hint: \e[4mp\e[0mrint \e[4mw\e[0mowrking \e[4md\e[0mirectory - you can think of a directory as the same thing as a folder\n\n"
 
