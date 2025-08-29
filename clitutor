@@ -68,23 +68,35 @@ while true; do
  if [[ "$user_input" == "cd /" ]]; then
   cd /
   echo
+  break
  else
   echo "That’s not quite right. Try typing: pwd"
  fi
+done
+
+while true; do
  read -p "\$ " user_input
  if [[ "$user_input" == "pwd" ]]; then
   pwd
   echo
+  break
  else
   echo "That’s not quite right. Try typing: pwd"
  fi
+done
+
+while true; do
  read -p "\$ " user_input
  if [[ "$user_input" == "ls" ]]; then
   ls
   echo
+  break
  else
   echo "That’s not quite right. Try typing: pwd"
  fi
+done
+
+while true; do
  read -p "\$ " user_input
  if [[ "$user_input" == "cd -" ]]; then
   cd -
@@ -94,4 +106,3 @@ while true; do
   echo "That’s not quite right. Try typing: pwd"
  fi
 done
-
