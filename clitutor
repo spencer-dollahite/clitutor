@@ -17,6 +17,7 @@ while true; do
  if [[ "$user_input" == "pwd" ]]; then
   pwd
   echo
+  echo "^^^^^^^"
   echo "Nice! You just printed your current directory."
   echo "Think of this as the folder you’re currently 'in'."
   echo "From here, you can run 'ls' to list the files and directories inside."
@@ -31,9 +32,22 @@ while true; do
  if [[ "$user_input" == "ls" ]]; then
   ls
   echo
+  echo "^^^^^^^"
   echo "Those are the files and folders inside the folder path shown above."
   printf "Hint: \e[4ml\e[0mist \e[4ms\e[0mtorage\n\n"
+  break
+ else
+  echo "That’s not quite right. Try typing: pwd"
+ fi
+done
+
+
+while true; do
+ read -p "Type 'c' to continue> " user_input
+ if [[ "$user_input" == "c" ]]; then
+  clear
   printf "From here, you can cd (\e[4mc\e[0mhange \e[4md\e[0mirectory) to other places. Below is a list of examples. The '/' is the root or top of the filesystem. These are known as absolute paths.\n\n"
+  echo
   break
  else
   echo "That’s not quite right. Try typing: pwd"
