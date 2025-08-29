@@ -33,9 +33,41 @@ while true; do
   echo
   echo "Those are the files and folders inside the folder path shown above."
   printf "Hint: \e[4ml\e[0mist \e[4ms\e[0mtorage\n\n"
-  printf "From here, you can cd (\e[4mc\e[0mhange \e[4md\e[0mirectory) to other places."
+  printf "From here, you can cd (\e[4mc\e[0mhange \e[4md\e[0mirectory) to other places. Below is a list of examples. The '/' is the root or top of the filesystem. These are known as absolute paths.\n\n"
   break
  else
   echo "That’s not quite right. Try typing: pwd"
  fi
 done
+
+find ~ -maxdepth 3 -not -path '*/.*' 2>/dev/null|head -n 5
+find /etc/* -maxdepth 3 -not -path '*/.*' 2>/dev/null|head -n 5
+
+echo 
+echo "Type 'cd /' below to change to the root. Then, do an 'ls' there. Then, enter 'cd -' to return here."
+
+while true; do
+ read -p "\$ " user_input
+ if [[ "$user_input" == "cd /" ]]; then
+  cd /
+  echo
+ else
+  echo "That’s not quite right. Try typing: pwd"
+ fi
+ read -p "\$ " user_input
+ if [[ "$user_input" == "ls" ]]; then
+  ls
+  echo
+ else
+  echo "That’s not quite right. Try typing: pwd"
+ fi
+ read -p "\$ " user_input
+ if [[ "$user_input" == "cd -" ]]; then
+  cd -
+  echo
+  break
+ else
+  echo "That’s not quite right. Try typing: pwd"
+ fi
+done
+
