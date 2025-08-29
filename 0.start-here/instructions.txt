@@ -10,10 +10,42 @@ I recommend opening a separate terminal window in which to run commands while yo
 
 Don't feel bad about using man to reference the myriad options for the thousands of commands you will eventually learn. Keeping all the flags and such in your mind for all time is tough. AI/LLMs are also very good at constructing CLI commands if you just describe what you want done. They may not be 100% perfect all the time, but you will find it covers a lot for you. We will proceed locally here, but you should feel free to take full advantage of online resources whenever desired.
 
-touch
-ls 
-cat
-> vs >>
-pipes
+$ touch newfile
+
+The 'touch' command can be used to create new, empty files. 
+
+$ ls -l #observe the zero bytes in newfile
+
+The '-l' option tells 'ls' to do a long listing which includes metadate for each file. A '#' denotes a comment. Anything after it will not be run/executed. It will just be used to convey information to a human reading it.
+
+$ echo 'text' > newfile #adds the string text into the file
+$ cat newfile # show the contents of newfile
+$ echo 'new text' > newfile #overwrite the existing file with new text
+$ cat newfile #observe the '>' overwriting contents
+$ echo 'appended text' >> newfile #note the double '>>' to APPEND more to the END of the file
+$ cat newfile #observe the two lines
+
+cat is short for concatenate which means to add together. You can 'cat' multiple files which will display one after the other.
+
+$ echo 'second file' > secondfile
+$ cat newfile secondfile #observe both file outputs one after the other
+
+Go ahead and take a look at 1.log and 2.log as examples of Apache web server output. It is common for log files to rotate which creates multiple files of the same format. 
+
+Use cat to view each log file. 
+
+You can look at the word count by piping the output of the file into the 'wc' command...like so...
+
+$ cat 1.log | wc -l #the -l limits to just show line numbers
+$ cat 2.log | wc -l 
+$ cat 1.log 2.log #concatenate the two files
+$ cat 1.log 2.log | wc -l #observe the two files summed together
+
+You could take the output of this concatenation and make a new efile with it.
+
+$ cat 1.log 2.log > newlog
+$ cat newlog | wc -l #confirm new file has the data from the two separate log files
+
+
+Other items to cover:
 && vs ;
-echo
