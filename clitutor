@@ -12,13 +12,13 @@ echo "Welcome to clitutor! You are on the cusp of an exciting journey."
 echo
 echo "Why learn the cli (Command Line Interface)?"
 echo
-echo "Both Windows and Linux/UNIX systems can be easily managed at scale via automation by using text-only commands rather than clicking around icons in a GUI (Graphical User Interface). Knowing your way around the CLI will let you operate expertly and efficiently around systems for both defensive and offensive operations."
+echo "Both Windows and Linux/UNIX systems can be easily managed at scale via automation by using text-only commands rather than clicking around icons in a GUI (Graphical User Interface). Knowing your way around the CLI will let you operate expertly and efficiently around systems for both defensive and offensive operations."|fold -s -w 80
 echo 
-echo "We will focus on non-Windows CLI. Over 90% of workloads on the internet/in 'the cloud' run on Linux/Unix systems, so this skillset is widely applicable when administering infrastructure."
+echo "We will focus on non-Windows CLI. Over 90% of workloads on the internet/in 'the cloud' run on Linux/Unix systems, so this skillset is widely applicable when administering infrastructure."| fold -s -w 80
 echo
 echo
 echo "Type 'pwd' (without the quotes) below to see where you currently are."
-printf "Hint: \e[4mp\e[0mrint \e[4mw\e[0mowrking \e[4md\e[0mirectory - you can think of a directory as the same thing as a folder\n\n"
+printf "Hint: \e[4mp\e[0mrint \e[4mw\e[0mowrking \e[4md\e[0mirectory - you can think of a directory as the same thing as a folder\n\n"|fold -s -w 80
 
 while true; do
  read -p "\$ " user_input
@@ -54,7 +54,7 @@ while true; do
  read -p "Type 'c' to continue> " user_input
  if [[ "$user_input" == "c" ]]; then
   clear
-  printf "From here, you can cd (\e[4mc\e[0mhange \e[4md\e[0mirectory) to other places. Below is a list of examples. The '/' is the root or top of the filesystem. These are known as absolute paths.\n\n"
+  printf "From here, you can cd (\e[4mc\e[0mhange \e[4md\e[0mirectory) to other places. Below is a list of examples. The '/' is the root or top of the filesystem. These are known as absolute paths.\n\n"|fold -s -w 80
   echo
   break
  else
@@ -69,7 +69,7 @@ echo
 echo "Type 'cd /' below to change to the root." 
 echo "Then print the working directory to see where you end up."
 echo "Then, do an 'ls' there to see what is hanging off the root of your filesystem."
-echo "Finally, enter 'cd -' to return back to where you were last. 'cd -' can be used to toggle between two locations quickly."
+echo "Finally, enter 'cd -' to return back to where you were last. 'cd -' can be used to toggle between two locations quickly."|fold -s -w 80
 
 while true; do
  read -p "\$ " user_input
@@ -123,7 +123,7 @@ echo "'cd ..' would move your working directory up one level to the parent"
 echo "'cd ../..' would take you up two levels. So on and so forth"
 echo
 echo "'cd ~' would take you to your home directory. 'cd' by itself will do the same thing."
-echo "'cd ~/<directory>' where <directory> is inside your home directory would take you to that path: /home/<user>/<directory>"
+echo "'cd ~/<directory>' where <directory> is inside your home directory would take you to that path: /home/<user>/<directory>"|fold -s -w 80
 echo 
 echo
 echo "show a listing, including hidden items, where you are now"
@@ -155,12 +155,12 @@ done
 
 clear
 echo
-echo "Now, you'll be dropped out of this sandbox that is clitutor back into your proper environment. Start maneuvering around by doing listings and changing into other directories to gain some situational awareness of what is here."
+echo "Now, you'll be dropped out of this sandbox that is clitutor back into your proper environment. Start maneuvering around by doing listings and changing into other directories to gain some situational awareness of what is here."|fold -s -w 80
 echo
-echo "The text you see to the left of where you've been typing is known as the PROMPT. This can be modified to show many different things, but yours probably uses the following format."
+echo "The text you see to the left of where you've been typing is known as the PROMPT. This can be modified to show many different things, but yours probably uses the following format."|fold -s -w 80
 echo "USERNAME@HOSTNAME:PATH$ - you may notice your PATH changes as you move around."
-echo "The '$' denotes a user with regular permissions. A '#' usually indicates you are root (the most priviledged user...think GOD user...there is no more powerful user. It is similar to SYSTEM in Windows. Other users can have admin privs without being root themselves. This is known as sudo or sudoers and they are similar to admins in Windows. More on permissions and privs later.)"
+echo "The '$' denotes a user with regular permissions. A '#' usually indicates you are root (the most priviledged user...think GOD user...there is no more powerful user. It is similar to SYSTEM in Windows. Other users can have admin privs without being root themselves. This is known as sudo or sudoers and they are similar to admins in Windows. More on permissions and privs later.)"|fold -s -w 80
 echo
-echo "You may notice filenames are case-sensitive. 'next-steps' is a real file. 'Next-steps' would be an entirely different file. It does not exist."
+echo "You may notice filenames are case-sensitive. 'next-steps' is a real file. 'Next-steps' would be an entirely different file. It does not exist."|fold -s -w 80
 echo
-echo "You may also find tab completion useful. After typing a few letters, hit the TAB key once. The word MAY auto-complete IF it is unique. If it is NOT unique, then you can hit the TAB key twice in quick succession. This should give you the options that start with the letters you have typed so far. You can then choose the next few letters to continue narrowing down the list until it IS unique in which case TAB will complete it. IF this behavior does not work on your system, then do some research online to determine how to install what is necessary on your system to get it working. It is a HUGE quality of life thing that you will want to be able to use."
+echo "You may also find tab completion useful. After typing a few letters, hit the TAB key once. The word MAY auto-complete IF it is unique. If it is NOT unique, then you can hit the TAB key twice in quick succession. This should give you the options that start with the letters you have typed so far. You can then choose the next few letters to continue narrowing down the list until it IS unique in which case TAB will complete it. IF this behavior does not work on your system, then do some research online to determine how to install what is necessary on your system to get it working. It is a HUGE quality of life thing that you will want to be able to use."|fold -s -w 80
