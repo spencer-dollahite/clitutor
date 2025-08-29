@@ -14,6 +14,8 @@ $ touch newfile
 
 The 'touch' command can be used to create new, empty files. 
 
+Note how the touch command worked successfully but just silently returned you to the prompt with no other indicator. This is normal behavior. Some commands, like pwd, will display standard output to the screen. Some commands will display errors or warnings to the screen if they encounter issues. You will learn to read these carefully. Sometimes you can ignore the warning; it is just informational. Other times, it will be a breaking error that needs troubleshooting.
+
 $ ls -l #observe the zero bytes in newfile
 
 The '-l' option tells 'ls' to do a long listing which includes metadate for each file. A '#' denotes a comment. Anything after it will not be run/executed. It will just be used to convey information to a human reading it.
@@ -49,3 +51,4 @@ $ cat newlog | wc -l #confirm new file has the data from the two separate log fi
 
 Other items to cover:
 && vs ;
+cp, mv, mkdir, rm
