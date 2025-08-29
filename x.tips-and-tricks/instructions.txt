@@ -1,0 +1,4 @@
+history
+CTRL+A/E: emacs movement
+CTRL+L: clear screen
+CTRL+R: reverse history search
