@@ -58,12 +58,22 @@ find ~ -maxdepth 3 -not -path '*/.*' 2>/dev/null|head -n 5
 find /etc/* -maxdepth 3 -not -path '*/.*' 2>/dev/null|head -n 5
 
 echo 
-echo "Type 'cd /' below to change to the root. Then, do an 'ls' there. Then, enter 'cd -' to return here."
+echo "Type 'cd /' below to change to the root." 
+echo "Then print the working directory to see where you end up."
+echo "Then, do an 'ls' there to see what is hanging off the root of your filesystem."
+echo "Finally, enter 'cd -' to return back to where you were last. 'cd -' can be used to toggle between two locations quickly."
 
 while true; do
  read -p "\$ " user_input
  if [[ "$user_input" == "cd /" ]]; then
   cd /
+  echo
+ else
+  echo "That’s not quite right. Try typing: pwd"
+ fi
+ read -p "\$ " user_input
+ if [[ "$user_input" == "pwd" ]]; then
+  pwd
   echo
  else
   echo "That’s not quite right. Try typing: pwd"
