@@ -157,6 +157,10 @@ clear
 echo
 echo "Now, you'll be dropped out of this sandbox that is clitutor back into your proper environment. Start maneuvering around by doing listings and changing into other directories to gain some situational awareness of what is here."
 echo
+echo "The text you see to the left of where you've been typing is known as the PROMPT. This can be modified to show many different things, but yours probably uses the following format."
+echo "USERNAME@HOSTNAME:PATH$ - you may notice your PATH changes as you move around."
+echo "The '$' denotes a user with regular permissions. A '#' usually indicates you are root (the most priviledged user...think GOD user...there is no more powerful user. It is similar to SYSTEM in Windows. Other users can have admin privs without being root themselves. This is known as sudo or sudoers and they are similar to admins in Windows. More on permissions and privs later.)"
+echo
 echo "You may notice filenames are case-sensitive. 'next-steps' is a real file. 'Next-steps' would be an entirely different file. It does not exist."
 echo
 echo "You may also find tab completion useful. After typing a few letters, hit the TAB key once. The word MAY auto-complete IF it is unique. If it is NOT unique, then you can hit the TAB key twice in quick succession. This should give you the options that start with the letters you have typed so far. You can then choose the next few letters to continue narrowing down the list until it IS unique in which case TAB will complete it. IF this behavior does not work on your system, then do some research online to determine how to install what is necessary on your system to get it working. It is a HUGE quality of life thing that you will want to be able to use."
