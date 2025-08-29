@@ -1,0 +1,7 @@
+curl
+wget
+ip a s / ifconfig
+ping
+nslookup
+nmap
+tcpdump
