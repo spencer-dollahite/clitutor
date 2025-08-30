@@ -1,4 +1,26 @@
 history
-CTRL+A/E: emacs movement
-CTRL+L: clear screen
+
+!!: repeat last command  
+$ sudo !! # quickly re-run previous command, now with sudo
+
+!<string>: run the most recent command that starts with <string>  
+!#: where # refers to the integer from the history command to identify the specific command to run
+!$: last argument from the previous command  
+$ cat long_file_name
+$ rm !$ # will delete long_file_name without needing to re-type/re-enter
+
 CTRL+R: reverse history search
+
+CTRL+A/E: emacs movement
+CTRL+W: delete word before cursor  
+CTRL+U: delete entire line before cursor  
+CTRL+Y: paste back the last killed text (after CTRL+W/U/K)  
+
+jobs: list background jobs  
+fg %<n>: bring job <n> to foreground  
+CTRL+Z: suspend current process  
+bg: resume suspended job in background  
+
+CTRL+c: cancel running process, bail out of command back to prompt
+
+CTRL+L: clear screen
