@@ -8,7 +8,9 @@ I recommend opening a separate terminal window in which to run commands while yo
 
 'man' stands for manual which is a program that provides local help documentation for many commands. Try 'man less' to show the manual/help docs for the less program. Take a few minutes to read over some of the info in there. 'man' will often use less as the pagination program, so you can move through the help docs as described above.
 
-Don't feel bad about using man to reference the myriad options for the thousands of commands you will eventually learn. Keeping all the flags and such in your mind for all time is tough. AI/LLMs are also very good at constructing CLI commands if you just describe what you want done. They may not be 100% perfect all the time, but you will find it covers a lot for you. We will proceed locally here, but you should feel free to take full advantage of online resources whenever desired.
+Don't feel bad about using man to reference the myriad options for the thousands of commands you will eventually learn. Keeping all the flags and such in your mind for all time is tough. You may also hear the refrain "RTFM" which means Read the Fucking Manual. It is trying to kindly communicate how valuable the information is in the documentation for what you are trying to do. Though extra guides and tutorials, like this one, add something to the learning process, there is something about going back to the source for direct answers. 
+
+AI/LLMs are also very good at constructing CLI commands if you just describe what you want done. They may not be 100% perfect all the time, but you will find it covers a lot for you. We will proceed locally here, but you should feel free to take full advantage of online resources whenever desired.
 
 $ touch newfile
 
@@ -18,7 +20,7 @@ Note how the touch command worked successfully but just silently returned you to
 
 $ ls -l #observe the zero bytes in newfile
 
-The '-l' option tells 'ls' to do a long listing which includes metadate for each file. A '#' denotes a comment. Anything after it will not be run/executed. It will just be used to convey information to a human reading it.
+The '-l' option tells 'ls' to do a long listing which includes metadata for each file. A '#' denotes a comment. Anything after it will not be run/executed. It will just be used to convey information to a human reading it.
 
 $ echo 'text' > newfile #adds the string text into the file
 $ cat newfile # show the contents of newfile
@@ -43,7 +45,7 @@ $ cat 2.log | wc -l
 $ cat 1.log 2.log #concatenate the two files
 $ cat 1.log 2.log | wc -l #observe the two files summed together
 
-You could take the output of this concatenation and make a new efile with it.
+You could take the output of this concatenation and make a new file with it.
 
 $ cat 1.log 2.log > newlog
 $ cat newlog | wc -l #confirm new file has the data from the two separate log files
