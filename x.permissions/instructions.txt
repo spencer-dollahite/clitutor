@@ -1,0 +1,182 @@
+Linux Permissions 
+================================================================
+
+1) The Permission Bits
+------------------------------
+$ ls -l shows one "view" of a directory's contents to include each item's permissions, size, and date.
+
+Example:
+-rw-r--r-- 1 alice dev 1234 Aug 30 12:00 notes.txt
+drwxr-xr-x 2 root  root 4096 Aug 30 12:00 bin
+-rwsr-xr-x 1 root  root 5.6K Aug 30 12:00 /usr/bin/passwd
+drwxrwsr-x 3 ops   ops  4096 Aug 30 12:00 /srv/project
+drwxrwxrwt 9 root  root 4096 Aug 30 12:00 /tmp
+
+Breakdown of the leftmost "mode" column:
+
+[type] [owner perms] [group perms] [other perms]
+1char    3 chars       3 chars      3 chars
+
+File type (first char):
+ -  regular file
+    d  directory
+    l  symlink
+
+    Permission triplets (rwx):
+ r = read       |  (4)
+ w = write      |  (2)
+ x = execute    |  (1)
+ - = bit not set|  (0)
+
+ The three permission sets apply to:
+ - owner (aka "user"): the file's owner
+ - group: the file's owning group
+ - other: everyone else
+
+ 2) What the bits mean
+ ---------------------
+ Regular files:
+ - r: can read file contents
+ - w: can modify file contents
+ - x: can execute the file as a program/script
+
+ Directories:
+ - r: can list names in the directory (see entries)
+ - w: can create, delete, or rename entries in the directory
+ - x: can "enter/traverse" the directory (access items within by path)
+
+ Important: Deleting a file requires **write+execute on the directory**, not on
+ the file itself.
+
+ 3) Octal (numeric) permissions
+ ------------------------------
+ Each triplet maps to a digit: r=4, w=2, x=1 (sum them).
+
+ Examples:
+ rw-  = 6   r-x  = 5   r--  = 4   --- = 0
+ rwx  = 7   -wx  = 3   -w-  = 2   --x = 1
+
+ Full modes (owner,group,other):
+ 644 = rw-r--r--   (common for text files)
+ 600 = rw-------   (private file)
+ 755 = rwxr-xr-x   (common for directories/executables)
+ 700 = rwx------   (private dir or script)
+ 770 = rwxrwx---   (shared within a group)
+
+ Set with chmod:
+ chmod 644 notes.txt
+ chmod 755 bin
+ chmod 700 secrets
+
+4) Special permission bits (setuid, setgid, sticky)
+ ---------------------------------------------------
+ These add a leading octal digit and show as s/t in the mode text.
+
+ Octal leading digit:
+ 4 = setuid
+ 2 = setgid
+ 1 = sticky
+ (They add; e.g., 6 = setuid+setgid, 7 = setuid+setgid+sticky)
+
+ How they appear in ls -l:
+ - setuid on file: owner execute shows as 's' (or 'S' if x not set)
+ Example: -rwsr-xr-x  (4755)  -> setuid program (runs with owner's EUID)
+ - setgid on file/dir: group execute shows as 's' (or 'S' if x not set)
+ Example file: -rwxr-sr-x (2755)
+ Example dir:  drwxrwsr-x (2775) -> new files inherit the directory's group
+ - sticky on directory: other execute shows as 't' (or 'T' if x not set)
+ Example: drwxrwxrwt (1777) -> /tmp; users can't delete others' files
+
+ Set with chmod:
+ chmod 4755 prog       # setuid + 755
+ chmod 2755 dir_or_bin # setgid + 755
+chmod 1777 scratch    # sticky + 777 (shared scratch dir)
+
+ 5) Reading examples quickly
+ ---------------------------
+ -rw-r--r--  -> 644: owner rw, group r, other r (regular readable file)
+ drwxr-xr-x  -> 755: owner rwx, group rx, other rx (common dir)
+ -rwx------  -> 700: only owner can read/write/execute
+ drwxrwsr-x  -> 2775: group-shared dir; new files inherit group
+ -rwsr-xr-x  -> 4755: setuid root tool (owner exec shows 's')
+ drwxrwxrwt  -> 1777: world-writable sticky dir (/tmp style)
+
+6) Symbolic chmod (alternative to octal)
+ ----------------------------------------
+ chmod u+x file     # add execute to owner
+ chmod g-w file     # remove write from group
+ chmod o=r file     # set other to read only
+ chmod ug+rw dir    # add rw to user and group
+ chmod a-x scripts  # remove execute from all (u,g,o)
+chmod g+s dir      # setgid on directory (group inheritance)
+ chmod o+t dir      # sticky bit on directory
+
+ 7) Who "you" are at access time
+ -------------------------------
+ Access check order uses your process credentials:
+ - If your effective UID == file's owner -> use owner bits
+ - Else if you are in the file's owning group -> use group bits
+ - Else -> use other bits
+
+ Supplementary groups matter for matching the owning group. (If POSIX ACLs are
+   present, they can refine this; see note below.)
+
+ 8) Common patterns
+ ------------------
+ Files:
+ - Private key:        600  (-rw-------)
+ - Config file:        640  (-rw-r-----)
+ - Executable script:  750  (-rwxr-x---) or 755 for public execute
+
+ Directories:
+ - Home private:       700  (drwx------)
+ - Web root read-only: 755  (drwxr-xr-x)
+ - Team share:         2775 (drwxrwsr-x)
+ - Temp scratch:       1777 (drwxrwxrwt)
+
+ 9) Quick practice snippets
+ --------------------------
+ Create a private dir and file:
+ mkdir -m 700 secrets
+ install -m 600 /dev/null secrets/notes.txt
+ ls -ld secrets
+ ls -l  secrets/notes.txt
+
+ Make a shared project dir where group owns new files:
+ sudo chgrp ops /srv/project
+ chmod 2775 /srv/project
+ ls -ld /srv/project   # look for 'rws' in the group triplet
+
+ Protect a shared scratch area from cross-deletes (sticky):
+  mkdir scratch
+  chmod 1777 scratch
+  ls -ld scratch        # look for the trailing 't'
+
+  10) Small ls field refresher
+  ----------------------------
+ -rw-r--r-- 1 alice dev 1234 Aug 30 12:00 notes.txt
+- rw-r--r--  -> mode (type+perms)
+ 1            -> hard link count
+alice        -> owner (user)
+ dev          -> group
+1234         -> size (bytes)
+ Aug 30 12:00 -> mtime
+ notes.txt    -> name
+
+ 11) Notes and gotchas
+ ---------------------
+ - Uppercase 'S'/'T' means setuid/setgid/sticky is set but execute is NOT.
+ Example: -rwSr--r--
+ - '+' after the mode (e.g., -rw-r--r--+) means extended ACLs exist.
+ View with getfacl. (SELinux/AppArmor may show as a trailing '.' on some ls.)
+ - Deleting a file depends on the directory perms (w+x), not the file perms.
+ - Executing a script also needs execute on all directories in its path.
+
+ 12) Real-world
+ ---------------------
+
+ Go look at the following files and note their default permissions. Ask yourself why they are set the way they are. 
+
+ /etc/passwd
+ /etc/shadow
+ /var/log/<anything>
