@@ -9,4 +9,4 @@ Intro tutorial video to come
 
 ## For Best Results
 
-[Labtainers](https://nps.edu/web/c3o/labtainers) is a free, local, open source lab environment. There are instruction guides and tutorial videos at that link to help you get it set up.
+[Labtainers](https://nps.edu/web/c3o/labtainers) is a free, local, open source lab environment. There are instruction guides and tutorial videos at that link to help you get it set up. It is NOT necessary to get started. The one-liner above will get you up and running quickly and easily. Labtainers is much more involved, but it will offer custom lab environments for better practice without messing up your current system.
