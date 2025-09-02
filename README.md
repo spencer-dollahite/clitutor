@@ -6,3 +6,7 @@ git clone https://github.com/spencer-dollahite/clitutor.git;cd clitutor;chmod +x
 ```
 
 Intro tutorial video to come
+
+## For Best Results
+
+[Labtainers](https://nps.edu/web/c3o/labtainers) is a free, local, open source lab environment. There are instruction guides and tutorial videos at that link to help you get it set up.
