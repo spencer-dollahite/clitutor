@@ -1,4 +1,5 @@
-history
+history: one way of viewing previous commands you have used
+history | grep <search-term>: a common way of searching / filtering for a specific line
 
 !!: repeat last command  
 $ sudo !! # quickly re-run previous command, now with sudo
@@ -9,7 +10,7 @@ $ sudo !! # quickly re-run previous command, now with sudo
 $ cat long_file_name
 $ rm !$ # will delete long_file_name without needing to re-type/re-enter
 
-CTRL+R: reverse history search
+CTRL+R: reverse history search (in my opinion, the superior way for finding and executing previous commands quickly and easily)
 
 CTRL+A/E: emacs movement
 CTRL+W: delete word before cursor  
