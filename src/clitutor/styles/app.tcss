@@ -1,0 +1,74 @@
+/* Global CLItutor theme - Claude Code inspired */
+
+Screen {
+    background: $surface;
+}
+
+/* Header XP bar area */
+#header-bar {
+    dock: top;
+    height: 3;
+    background: $primary-background;
+    color: $text;
+    padding: 0 2;
+    layout: horizontal;
+}
+
+#app-title {
+    width: auto;
+    padding: 1 2;
+    text-style: bold;
+    color: $accent;
+}
+
+#level-badge {
+    width: auto;
+    padding: 1 1;
+    color: $warning;
+    text-style: bold;
+}
+
+#xp-bar-container {
+    width: 1fr;
+    height: 3;
+    padding: 1 2;
+    layout: horizontal;
+}
+
+#xp-progress {
+    width: 1fr;
+    height: 1;
+}
+
+#xp-label {
+    width: auto;
+    padding: 0 1;
+    color: $text-muted;
+}
+
+/* Footer hint bar */
+#footer-bar {
+    dock: bottom;
+    height: 1;
+    background: $primary-background;
+    color: $text-muted;
+    padding: 0 2;
+}
+
+/* Toast notification styling */
+Toast {
+    background: $primary;
+    color: $text;
+}
+
+Toast.-success {
+    background: $success;
+}
+
+Toast.-error {
+    background: $error;
+}
+
+Toast.-warning {
+    background: $warning;
+}

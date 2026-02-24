@@ -1,0 +1,87 @@
+/* HomeScreen layout */
+
+HomeScreen {
+    layout: vertical;
+}
+
+#home-container {
+    width: 100%;
+    height: 1fr;
+    padding: 1 2;
+}
+
+#banner {
+    width: 100%;
+    height: auto;
+    max-height: 12;
+    content-align: center middle;
+    text-align: center;
+    padding: 1 0;
+    color: $accent;
+}
+
+#stats-bar {
+    width: 100%;
+    height: 3;
+    layout: horizontal;
+    padding: 0 2;
+    content-align: center middle;
+}
+
+#stats-xp {
+    width: 1fr;
+    text-align: center;
+    color: $warning;
+    text-style: bold;
+}
+
+#stats-level {
+    width: 1fr;
+    text-align: center;
+    color: $accent;
+    text-style: bold;
+}
+
+#stats-completed {
+    width: 1fr;
+    text-align: center;
+    color: $success;
+}
+
+#lesson-browser-container {
+    width: 100%;
+    height: 1fr;
+    border: solid $primary;
+    padding: 1;
+}
+
+#lesson-browser-title {
+    width: 100%;
+    height: 1;
+    text-align: center;
+    text-style: bold;
+    color: $text;
+    padding: 0 0 1 0;
+}
+
+#lesson-list {
+    width: 100%;
+    height: 1fr;
+}
+
+.lesson-item {
+    height: 3;
+    padding: 0 2;
+}
+
+.lesson-item:hover {
+    background: $primary-background-lighten-1;
+}
+
+.lesson-item.-completed {
+    color: $success;
+}
+
+.lesson-item.-in-progress {
+    color: $warning;
+}
