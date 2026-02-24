@@ -6,7 +6,7 @@ from typing import List
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Label, Markdown, Static
+from textual.widgets import Label, Markdown
 
 
 class HintOverlay(ModalScreen[None]):
@@ -30,20 +30,22 @@ class HintOverlay(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         with Vertical(id="hint-dialog"):
             yield Label(f" Hint ({self._hints_shown}/{len(self._hints)}) ", id="hint-title")
-            if self._hints_shown == 0:
-                yield Label("[dim]Press [bold]n[/bold] to reveal the first hint.[/]", id="hint-content")
-            else:
-                hint_text = ""
-                labels = ["Nudge", "Guidance", "Almost the answer"]
-                for i in range(self._hints_shown):
-                    level = labels[i] if i < len(labels) else f"Hint {i + 1}"
-                    hint_text += f"**{level}:** {self._hints[i]}\n\n"
-                if self._hints_shown < len(self._hints):
-                    hint_text += "*Press `n` for more hints (XP penalty increases)*"
-                else:
-                    hint_text += "*No more hints available*"
-                yield Markdown(hint_text, id="hint-content")
+            yield Markdown(self._build_hint_text(), id="hint-content")
             yield Label("[dim]ESC to close | n for next hint[/]", id="hint-footer")
+
+    def _build_hint_text(self) -> str:
+        if self._hints_shown == 0:
+            return "*Press `n` to reveal the first hint.*"
+        labels = ["Nudge", "Guidance", "Almost the answer"]
+        text = ""
+        for i in range(self._hints_shown):
+            level = labels[i] if i < len(labels) else f"Hint {i + 1}"
+            text += f"**{level}:** {self._hints[i]}\n\n"
+        if self._hints_shown < len(self._hints):
+            text += "*Press `n` for more hints (XP penalty increases)*"
+        else:
+            text += "*No more hints available*"
+        return text
 
     def action_dismiss_hint(self) -> None:
         self.dismiss(None)
@@ -51,33 +53,10 @@ class HintOverlay(ModalScreen[None]):
     def action_next_hint(self) -> None:
         if self._hints_shown < len(self._hints):
             self._hints_shown += 1
-            self._refresh_content()
-
-    def _refresh_content(self) -> None:
-        """Refresh the hint content display."""
-        title = self.query_one("#hint-title", Label)
-        title.update(f" Hint ({self._hints_shown}/{len(self._hints)}) ")
-
-        content = self.query_one("#hint-content")
-        labels = ["Nudge", "Guidance", "Almost the answer"]
-        hint_text = ""
-        for i in range(self._hints_shown):
-            level = labels[i] if i < len(labels) else f"Hint {i + 1}"
-            hint_text += f"**{level}:** {self._hints[i]}\n\n"
-        if self._hints_shown < len(self._hints):
-            hint_text += "*Press `n` for more hints (XP penalty increases)*"
-        else:
-            hint_text += "*No more hints available*"
-
-        if isinstance(content, Markdown):
-            content.update(hint_text)
-        elif isinstance(content, Label):
-            # Replace label with Markdown on first hint reveal
-            content.remove()
-            md = Markdown(hint_text, id="hint-content")
-            dialog = self.query_one("#hint-dialog")
-            footer = self.query_one("#hint-footer")
-            dialog.mount(md, before=footer)
+            title = self.query_one("#hint-title", Label)
+            title.update(f" Hint ({self._hints_shown}/{len(self._hints)}) ")
+            content = self.query_one("#hint-content", Markdown)
+            content.update(self._build_hint_text())
 
     @property
     def hints_shown(self) -> int:
