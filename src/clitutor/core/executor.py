@@ -112,6 +112,10 @@ class CommandExecutor:
             self._cwd, self._home, self._user, self._hostname
         )
 
+    def reset_cwd(self) -> None:
+        """Reset cwd to the sandbox root."""
+        self._cwd = str(self.sandbox_path)
+
     def check_safety(self, command: str) -> Optional[str]:
         """Check if a command is safe. Returns reason if blocked, None if safe."""
         cmd_stripped = command.strip()
@@ -204,6 +208,10 @@ class DockerExecutor:
         return _format_prompt_markup(
             self._cwd, self._home, self._user, self._hostname
         )
+
+    def reset_cwd(self) -> None:
+        """Reset cwd to the sandbox root."""
+        self._cwd = self._sandbox.path
 
     def run(
         self, command: str, timeout: int = DEFAULT_TIMEOUT, track_cwd: bool = True

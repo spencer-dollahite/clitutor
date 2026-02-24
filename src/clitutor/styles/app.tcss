@@ -1,14 +1,14 @@
 /* Global CLItutor theme - Claude Code inspired */
 
 Screen {
-    background: $surface;
+    background: #000000;
 }
 
 /* Header XP bar area */
 #header-bar {
     dock: top;
     height: 3;
-    background: $primary-background;
+    background: #000000;
     color: $text;
     padding: 0 2;
     layout: horizontal;
@@ -50,7 +50,7 @@ Screen {
 #footer-bar {
     dock: bottom;
     height: 1;
-    background: $primary-background;
+    background: #000000;
     color: $text-muted;
     padding: 0 2;
 }

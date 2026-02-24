@@ -1,17 +1,60 @@
 """Home screen - banner, stats, lesson browser."""
 from __future__ import annotations
 
-from typing import List, Set
+from typing import Dict, List, Set
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.screen import Screen
-from textual.widgets import Footer, Header, Label, Static
+from textual.screen import ModalScreen, Screen
+from textual.widgets import Button, Footer, Header, Label, Static
 
 from clitutor.models.lesson import LessonMeta
+from clitutor.models.progress import ProgressManager
 from clitutor.models.xp import get_level_info
 from clitutor.widgets.lesson_browser import LessonBrowser
 from clitutor.widgets.xp_bar import XPBar
+
+
+class ConfirmResetScreen(ModalScreen[bool]):
+    """Modal confirmation dialog for resetting progress."""
+
+    DEFAULT_CSS = """
+    ConfirmResetScreen {
+        align: center middle;
+    }
+    #confirm-dialog {
+        width: 50;
+        height: auto;
+        padding: 1 2;
+        background: #1a1a1a;
+        border: solid #ff4444;
+    }
+    #confirm-dialog Label {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 1;
+    }
+    #confirm-buttons {
+        width: 100%;
+        height: auto;
+        align-horizontal: center;
+        layout: horizontal;
+    }
+    #confirm-buttons Button {
+        margin: 0 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="confirm-dialog"):
+            yield Label("[bold red]Reset All Progress?[/]")
+            yield Label("This will erase all XP and exercise completions.")
+            with Vertical(id="confirm-buttons"):
+                yield Button("Yes, reset", variant="error", id="confirm-yes")
+                yield Button("Cancel", variant="primary", id="confirm-no")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "confirm-yes")
 
 BANNER = r"""
    ____ _     ___ _         _
@@ -30,6 +73,7 @@ class HomeScreen(Screen):
     BINDINGS = [
         ("q", "quit_app", "Quit"),
         ("escape", "quit_app", "Quit"),
+        ("r", "reset_progress", "Reset Progress"),
     ]
 
     def __init__(
@@ -37,12 +81,16 @@ class HomeScreen(Screen):
         lessons: List[LessonMeta],
         total_xp: int = 0,
         completed: Set[str] | None = None,
+        exercise_progress: Dict[str, int] | None = None,
+        progress_mgr: ProgressManager | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._lessons = lessons
         self._total_xp = total_xp
         self._completed = completed or set()
+        self._exercise_progress = exercise_progress or {}
+        self._progress = progress_mgr
 
     def compose(self) -> ComposeResult:
         yield XPBar(total_xp=self._total_xp, id="header-bar")
@@ -51,7 +99,7 @@ class HomeScreen(Screen):
             yield self._make_stats_bar()
             yield LessonBrowser(
                 self._lessons,
-                completed=self._completed,
+                exercise_progress=self._exercise_progress,
                 id="lesson-browser-container",
             )
         yield Footer()
@@ -81,10 +129,33 @@ class HomeScreen(Screen):
     def action_quit_app(self) -> None:
         self.app.exit()
 
-    def refresh_data(self, total_xp: int, completed: Set[str]) -> None:
+    def action_reset_progress(self) -> None:
+        if self._progress is None:
+            return
+
+        def _on_confirm(confirmed: bool) -> None:
+            if not confirmed:
+                return
+            self._progress.reset_all()
+            self.refresh_data(
+                total_xp=0,
+                completed=set(),
+                exercise_progress={},
+            )
+            self.notify("All progress has been reset.", severity="warning", timeout=3)
+
+        self.app.push_screen(ConfirmResetScreen(), callback=_on_confirm)
+
+    def refresh_data(
+        self,
+        total_xp: int,
+        completed: Set[str],
+        exercise_progress: Dict[str, int] | None = None,
+    ) -> None:
         """Refresh displayed data after returning from a lesson."""
         self._total_xp = total_xp
         self._completed = completed
+        self._exercise_progress = exercise_progress or {}
 
         # Update XP bar
         xp_bar = self.query_one(XPBar)
@@ -103,4 +174,4 @@ class HomeScreen(Screen):
 
         # Update lesson browser
         browser = self.query_one(LessonBrowser)
-        browser.refresh_status(completed)
+        browser.refresh_status(self._exercise_progress)

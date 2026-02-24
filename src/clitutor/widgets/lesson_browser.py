@@ -1,7 +1,7 @@
 """Lesson browser widget - ListView with status icons."""
 from __future__ import annotations
 
-from typing import List, Set
+from typing import Dict, List
 
 from textual.app import ComposeResult
 from textual.message import Message
@@ -13,18 +13,40 @@ from clitutor.models.lesson import LessonMeta
 class LessonItem(ListItem):
     """A single lesson entry in the browser."""
 
-    def __init__(self, meta: LessonMeta, completed: bool = False, **kwargs) -> None:
+    def __init__(
+        self, meta: LessonMeta, completed_count: int = 0, **kwargs
+    ) -> None:
         super().__init__(**kwargs)
         self.meta = meta
-        self.completed = completed
+        self.completed_count = completed_count
 
     def compose(self) -> ComposeResult:
-        icon = "[green]✓[/]" if self.completed else "[dim]○[/]"
+        yield Label(self._render_label(), markup=True)
+
+    def _render_label(self) -> str:
+        total = self.meta.exercise_count
+        done = self.completed_count
+        all_done = done >= total and total > 0
+        icon = "[green]✓[/]" if all_done else "[dim]○[/]"
+        if total > 0:
+            progress = f"[green]{done}/{total}[/]" if all_done else f"[yellow]{done}/{total}[/]"
+        else:
+            progress = ""
         diff_stars = "[yellow]" + ("★" * self.meta.difficulty) + ("☆" * (5 - self.meta.difficulty)) + "[/]"
-        yield Label(
-            f" {icon}  {self.meta.order:02d}. {self.meta.title}  {diff_stars}  [dim]{self.meta.xp} XP[/]",
-            markup=True,
+        return (
+            f" {icon}  {self.meta.order:02d}. {self.meta.title}  "
+            f"{progress}  {diff_stars}  [dim]{self.meta.xp} XP[/]"
         )
+
+    def update_progress(self, completed_count: int) -> None:
+        """Update the completed count and re-render the label."""
+        if self.completed_count != completed_count:
+            self.completed_count = completed_count
+            try:
+                label = self.query_one(Label)
+                label.update(self._render_label())
+            except Exception:
+                self.refresh()
 
 
 class LessonBrowser(Static):
@@ -39,17 +61,20 @@ class LessonBrowser(Static):
     def __init__(
         self,
         lessons: List[LessonMeta],
-        completed: Set[str] | None = None,
+        exercise_progress: Dict[str, int] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._lessons = lessons
-        self._completed = completed or set()
+        self._exercise_progress = exercise_progress or {}
 
     def compose(self) -> ComposeResult:
         yield Label(" Lessons ", id="lesson-browser-title")
         items = [
-            LessonItem(meta, completed=meta.id in self._completed)
+            LessonItem(
+                meta,
+                completed_count=self._exercise_progress.get(meta.id, 0),
+            )
             for meta in self._lessons
         ]
         yield ListView(*items, id="lesson-list")
@@ -59,13 +84,12 @@ class LessonBrowser(Static):
         if isinstance(item, LessonItem):
             self.post_message(self.LessonSelected(item.meta))
 
-    def refresh_status(self, completed: Set[str]) -> None:
-        """Update completion status icons."""
-        self._completed = completed
+    def refresh_status(self, exercise_progress: Dict[str, int]) -> None:
+        """Update exercise progress for all lessons."""
+        self._exercise_progress = exercise_progress
         list_view = self.query_one("#lesson-list", ListView)
         for child in list_view.children:
             if isinstance(child, LessonItem):
-                was = child.completed
-                child.completed = child.meta.id in completed
-                if was != child.completed:
-                    child.refresh()
+                child.update_progress(
+                    exercise_progress.get(child.meta.id, 0)
+                )

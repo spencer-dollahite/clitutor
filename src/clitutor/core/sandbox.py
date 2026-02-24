@@ -78,6 +78,28 @@ class SandboxManager:
             raise FileNotFoundError(f"File not found: {filepath}")
         return target.read_text()
 
+    def has_dir_with_file(self) -> bool:
+        """Check if any subdirectory in the sandbox contains at least one file."""
+        if self._sandbox_dir is None:
+            return False
+        for dirpath, _dirnames, filenames in os.walk(self._sandbox_dir):
+            if filenames and Path(dirpath) != self._sandbox_dir:
+                return True
+        return False
+
+    def find_file_containing(self, content: str) -> bool:
+        """Check if any file in the sandbox contains the given content."""
+        if self._sandbox_dir is None:
+            return False
+        for item in self._sandbox_dir.rglob("*"):
+            if item.is_file():
+                try:
+                    if content in item.read_text():
+                        return True
+                except (UnicodeDecodeError, PermissionError):
+                    continue
+        return False
+
     def __enter__(self) -> "SandboxManager":
         self.create()
         return self

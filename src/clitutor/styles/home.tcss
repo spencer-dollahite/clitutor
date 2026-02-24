@@ -53,6 +53,7 @@ HomeScreen {
     height: 1fr;
     border: solid $primary;
     padding: 1;
+    background: #000000;
 }
 
 #lesson-browser-title {
@@ -67,6 +68,7 @@ HomeScreen {
 #lesson-list {
     width: 100%;
     height: 1fr;
+    background: #000000;
 }
 
 .lesson-item {

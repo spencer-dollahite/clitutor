@@ -39,7 +39,7 @@ class LessonScreen(Screen):
         self._sandbox = sandbox
         self._current_exercise_idx = 0
         self._executor = self._make_executor()
-        self._validator = OutputValidator(sandbox)
+        self._validator = OutputValidator(sandbox, executor=self._executor)
 
         # Skip already-completed exercises
         self._advance_to_first_incomplete()
@@ -117,6 +117,9 @@ class LessonScreen(Screen):
         ex.hints_used = 0
         ex.completed = False
 
+        # Reset cwd to sandbox root for a clean exercise start
+        self._executor.reset_cwd()
+
         # Set up sandbox for exercise
         if ex.sandbox_setup:
             for cmd in ex.sandbox_setup:
@@ -131,8 +134,9 @@ class LessonScreen(Screen):
             f"[bold] Exercise {completed + 1}/{total}: {ex.title} [/]"
         )
 
-        # Show exercise prompt in terminal
+        # Show exercise prompt in terminal and update prompt after cwd reset
         terminal = self.query_one(TerminalPane)
+        terminal.update_prompt()
         terminal.write_system_message(f"--- Exercise {completed + 1}: {ex.title} ---")
 
     def _seed_lesson_assets(self) -> None:
@@ -276,7 +280,7 @@ class LessonScreen(Screen):
         """Reset the sandbox and re-setup current exercise."""
         self._sandbox.reset()
         self._executor = self._make_executor()
-        self._validator = OutputValidator(self._sandbox)
+        self._validator = OutputValidator(self._sandbox, executor=self._executor)
         self._setup_current_exercise()
         terminal = self.query_one(TerminalPane)
         terminal.executor = self._executor

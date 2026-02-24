@@ -63,6 +63,8 @@ class CLItutorApp(App):
             lessons=self._lesson_metadata,
             total_xp=self._progress.total_xp,
             completed=self._progress.completed_lessons,
+            exercise_progress=self._progress.exercise_progress,
+            progress_mgr=self._progress,
         )
         self.push_screen(home)
 
@@ -88,6 +90,7 @@ class CLItutorApp(App):
             screen.refresh_data(
                 total_xp=self._progress.total_xp,
                 completed=self._progress.completed_lessons,
+                exercise_progress=self._progress.exercise_progress,
             )
 
     def on_unmount(self) -> None:

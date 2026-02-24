@@ -131,6 +131,25 @@ class DockerSandbox:
             raise FileNotFoundError(f"File not found in container: {filepath}")
         return result.stdout
 
+    def has_dir_with_file(self) -> bool:
+        """Check if any subdirectory in the sandbox contains at least one file."""
+        if self._container_name is None:
+            return False
+        result = self._exec(
+            f"find {SANDBOX_DIR} -mindepth 2 -type f 2>/dev/null | head -1"
+        )
+        return bool(result.stdout.strip())
+
+    def find_file_containing(self, content: str) -> bool:
+        """Check if any file in the sandbox contains the given content."""
+        if self._container_name is None:
+            return False
+        escaped = content.replace("'", "'\\''")
+        result = self._exec(
+            f"grep -rl '{escaped}' {SANDBOX_DIR}/ 2>/dev/null | head -1"
+        )
+        return bool(result.stdout.strip())
+
     def _exec(self, command: str, user: str = "student") -> subprocess.CompletedProcess:
         """Run a command inside the container."""
         return subprocess.run(

@@ -134,6 +134,11 @@ class ProgressManager:
             del self._lessons[lesson_id]
             self.save()
 
+    @property
+    def exercise_progress(self) -> Dict[str, int]:
+        """Return {lesson_id: completed_exercise_count} for all lessons."""
+        return {lid: lp.completed_count for lid, lp in self._lessons.items()}
+
     def reset_all(self) -> None:
         self._lessons.clear()
         self.save()
