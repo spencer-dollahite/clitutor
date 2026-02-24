@@ -26,7 +26,7 @@ xp: 10
 difficulty: 1
 sandbox_setup: null
 validation_type: output_regex
-expected: (/tmp/clitutor-sandbox|/home/student/sandbox)
+expected: "^/"
 hints:
   - "Think about what command shows WHERE you are."
   - "The command is three letters: Print Working Directory."
@@ -108,20 +108,20 @@ two locations). You can go up one level with `cd ..`, or up two levels with
 
 <!-- exercise
 id: ex04
-title: Navigate up one level
+title: Confirm your location
 xp: 10
 difficulty: 1
 sandbox_setup:
   - "mkdir -p a/b/c"
 validation_type: output_regex
-expected: (/tmp/clitutor-sandbox|/home/student/sandbox)
+expected: "^/"
 hints:
   - "You need to confirm your current directory."
   - "The command to print your working directory is three letters."
   - "Type exactly: `pwd`"
 -->
 ### Exercise 4: Confirm your location
-Print your current working directory to confirm you are in the sandbox root.
+Print your current working directory to confirm where you are.
 
 ---
 
@@ -199,19 +199,21 @@ Display a detailed (long) listing of the current directory.
 
 <!-- exercise
 id: ex07
-title: Create a file and a directory
+title: Create a directory with a file inside it
 xp: 15
 difficulty: 1
 sandbox_setup: null
-validation_type: file_exists
-expected: mydir/myfile.txt
+validation_type: dir_with_file
+expected: ""
 hints:
   - "You need to create a directory first, then create a file inside it."
   - "Use mkdir for the directory and touch for the file."
-  - "Type: `mkdir mydir && touch mydir/myfile.txt`"
+  - "Example: `mkdir mydir && touch mydir/myfile.txt`"
 -->
-### Exercise 7: Create a file and a directory
-Create a directory called `mydir` and an empty file inside it called `myfile.txt`.
+### Exercise 7: Create a directory with a file inside it
+First, create a new directory using `mkdir`. Then, create an empty file **inside
+that new directory** using `touch`. You can pick any names you like
+(for example, `mkdir mydir && touch mydir/myfile.txt`).
 
 ---
 
@@ -240,15 +242,16 @@ title: Write and read a file
 xp: 20
 difficulty: 1
 sandbox_setup: null
-validation_type: file_contains
-expected: journal.txt::Today I learned the CLI
+validation_type: any_file_contains
+expected: Today I learned the CLI
 hints:
   - "Use echo with redirection to write text into a file."
   - "The > operator sends output to a file. Put your text in quotes."
-  - "Type: `echo 'Today I learned the CLI' > journal.txt`"
+  - "Example: `echo 'Today I learned the CLI' > journal.txt`"
 -->
 ### Exercise 8: Write and read a file
-Use `echo` and redirection to create a file called `journal.txt` containing the text `Today I learned the CLI`.
+Use `echo` and redirection to create a file containing the text `Today I learned the CLI`.
+You can name the file anything you like (for example, `journal.txt`).
 
 ---
 
