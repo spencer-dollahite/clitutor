@@ -25,19 +25,17 @@ class CommandInput(Static):
             self.text = text
             self.cursor_pos = cursor_pos
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, prompt_markup: str = "$ ", **kwargs) -> None:
         super().__init__(**kwargs)
         self._history: List[str] = []
         self._history_index: int = -1
         self._completing: bool = False
+        self._prompt_markup = prompt_markup
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="command-input-container"):
-            yield Label("$ ", id="prompt-label")
-            yield Input(
-                placeholder="Type a command...",
-                id="command-input",
-            )
+            yield Label(self._prompt_markup, id="prompt-label", markup=True)
+            yield Input(id="command-input")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         cmd = event.value.strip()
@@ -97,6 +95,11 @@ class CommandInput(Static):
             self.query_one("#command-input", Input).focus()
         except Exception:
             pass
+
+    def update_prompt(self, markup: str) -> None:
+        """Update the prompt label text at runtime."""
+        self._prompt_markup = markup
+        self.query_one("#prompt-label", Label).update(markup)
 
     def set_disabled(self, disabled: bool) -> None:
         """Enable/disable input."""

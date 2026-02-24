@@ -74,11 +74,9 @@ LessonScreen {
 }
 
 #prompt-label {
-    width: 2;
+    width: auto;
     height: 3;
     padding: 1 0;
-    color: #00ff00;
-    text-style: bold;
     background: #1a1a1a;
 }
 

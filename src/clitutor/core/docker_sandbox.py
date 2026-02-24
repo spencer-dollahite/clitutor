@@ -38,6 +38,7 @@ class DockerSandbox:
             [
                 "docker", "run", "-d",
                 "--name", name,
+                "--hostname", "clitutor",
                 "--network", "none",
                 IMAGE_NAME,
             ],

@@ -34,12 +34,14 @@ class TerminalPane(Vertical):
 
     def compose(self) -> ComposeResult:
         yield RichLog(highlight=True, markup=True, wrap=True, id="terminal-output")
-        yield CommandInput(id="cmd-input-widget")
+        yield CommandInput(
+            prompt_markup=self.executor.prompt_markup,
+            id="cmd-input-widget",
+        )
 
     def on_mount(self) -> None:
         log = self.query_one("#terminal-output", RichLog)
         log.write("[bold green]CLItutor Sandbox Terminal[/]")
-        log.write(f"[dim]cwd: {self.executor.sandbox_path}[/]")
         log.write("[dim]Type commands below. Use /hint, /reset, /skip, /lessons, /quit.[/]")
         log.write("")
         # Ensure the input gets focus
@@ -61,9 +63,9 @@ class TerminalPane(Vertical):
             self.post_message(SlashCommand(cmd))
             return
 
-        # Echo command in output
+        # Echo command in output with realistic prompt
         log = self.query_one("#terminal-output", RichLog)
-        log.write(f"[green bold]$ {cmd}[/]")
+        log.write(self.executor.prompt_markup + cmd)
 
         # Disable input while running
         self.query_one(CommandInput).set_disabled(True)
@@ -90,9 +92,11 @@ class TerminalPane(Vertical):
                 log.write(f"{style}{line}[/]")
         log.write("")
 
-        # Re-enable and refocus input
-        self.query_one(CommandInput).set_disabled(False)
-        self.query_one(CommandInput).focus_input()
+        # Update prompt to reflect any cwd change, then re-enable input
+        cmd_input = self.query_one(CommandInput)
+        cmd_input.update_prompt(self.executor.prompt_markup)
+        cmd_input.set_disabled(False)
+        cmd_input.focus_input()
 
         # Notify parent
         self.post_message(self.CommandCompleted(result))
@@ -115,7 +119,7 @@ class TerminalPane(Vertical):
             self.app.call_from_thread(self._apply_tab_completion, text, cursor_pos, [])
             return
 
-        result = self.executor.run(cmd, timeout=3)
+        result = self.executor.run(cmd, timeout=3, track_cwd=False)
         matches = parse_completions(result.stdout) if result.returncode == 0 else []
         self.app.call_from_thread(self._apply_tab_completion, text, cursor_pos, matches)
 
@@ -185,6 +189,10 @@ class TerminalPane(Vertical):
         """Write a system message to the terminal output."""
         log = self.query_one("#terminal-output", RichLog)
         log.write(f"[bold cyan]{text}[/]")
+
+    def update_prompt(self) -> None:
+        """Refresh the prompt label from the current executor state."""
+        self.query_one(CommandInput).update_prompt(self.executor.prompt_markup)
 
     def focus_input(self) -> None:
         self.query_one(CommandInput).focus_input()

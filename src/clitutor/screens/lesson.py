@@ -278,8 +278,10 @@ class LessonScreen(Screen):
         self._executor = self._make_executor()
         self._validator = OutputValidator(self._sandbox)
         self._setup_current_exercise()
-        self.query_one(TerminalPane).executor = self._executor
-        self.query_one(TerminalPane).write_system_message("Sandbox reset.")
+        terminal = self.query_one(TerminalPane)
+        terminal.executor = self._executor
+        terminal.update_prompt()
+        terminal.write_system_message("Sandbox reset.")
 
     def _show_progress(self) -> None:
         """Show current lesson progress."""
