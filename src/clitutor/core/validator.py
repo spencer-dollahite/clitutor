@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from typing import Union
 
 from clitutor.core.executor import CommandResult
 from clitutor.models.lesson import Exercise
@@ -19,8 +19,8 @@ class ValidationResult:
 class OutputValidator:
     """Validates command results against exercise expectations."""
 
-    def __init__(self, sandbox_path: Path) -> None:
-        self.sandbox_path = sandbox_path
+    def __init__(self, sandbox: Union["SandboxManager", "DockerSandbox", object]) -> None:
+        self._sandbox = sandbox
 
     def validate(self, exercise: Exercise, result: CommandResult) -> ValidationResult:
         """Validate a command result against an exercise's expectations."""
@@ -62,8 +62,7 @@ class OutputValidator:
         return ValidationResult(False, "Output doesn't match expected pattern.")
 
     def _check_file_exists(self, expected: str) -> ValidationResult:
-        target = self.sandbox_path / expected
-        if target.exists():
+        if self._sandbox.file_exists(expected):
             return ValidationResult(True, "Correct! File created.")
         return ValidationResult(False, f"File '{expected}' not found in sandbox.")
 
@@ -72,10 +71,10 @@ class OutputValidator:
         if "::" not in expected:
             return ValidationResult(False, "Invalid file_contains spec.")
         filename, content = expected.split("::", 1)
-        target = self.sandbox_path / filename.strip()
-        if not target.exists():
-            return ValidationResult(False, f"File '{filename.strip()}' not found.")
-        file_content = target.read_text()
+        filename = filename.strip()
+        if not self._sandbox.file_exists(filename):
+            return ValidationResult(False, f"File '{filename}' not found.")
+        file_content = self._sandbox.file_read(filename)
         if content.strip() in file_content:
             return ValidationResult(True, "Correct! File contains expected content.")
         return ValidationResult(False, "File doesn't contain expected content.")

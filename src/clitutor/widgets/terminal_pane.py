@@ -7,7 +7,7 @@ from textual.message import Message
 from textual.widgets import RichLog, Static
 from textual import work
 
-from clitutor.core.executor import CommandExecutor, CommandResult
+from clitutor.core.executor import CommandResult
 from clitutor.widgets.command_input import CommandInput
 
 
@@ -20,7 +20,7 @@ class TerminalPane(Vertical):
             super().__init__()
             self.result = result
 
-    def __init__(self, executor: CommandExecutor, **kwargs) -> None:
+    def __init__(self, executor, **kwargs) -> None:
         super().__init__(**kwargs)
         self.executor = executor
 

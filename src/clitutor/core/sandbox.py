@@ -63,6 +63,21 @@ class SandboxManager:
             shutil.rmtree(self._sandbox_dir, ignore_errors=True)
             self._sandbox_dir = None
 
+    def file_exists(self, filepath: str) -> bool:
+        """Check if a file exists in the sandbox."""
+        if self._sandbox_dir is None:
+            return False
+        return (self._sandbox_dir / filepath).exists()
+
+    def file_read(self, filepath: str) -> str:
+        """Read a file's contents from the sandbox."""
+        if self._sandbox_dir is None:
+            raise RuntimeError("Sandbox not created.")
+        target = self._sandbox_dir / filepath
+        if not target.exists():
+            raise FileNotFoundError(f"File not found: {filepath}")
+        return target.read_text()
+
     def __enter__(self) -> "SandboxManager":
         self.create()
         return self

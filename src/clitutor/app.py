@@ -1,10 +1,12 @@
 """Main CLItutor Textual application."""
 from __future__ import annotations
 
-from pathlib import Path
+import subprocess
+from typing import Union
 
 from textual.app import App
 
+from clitutor.core.docker_sandbox import DockerSandbox
 from clitutor.core.loader import LessonLoader
 from clitutor.core.sandbox import SandboxManager
 from clitutor.models.lesson import LessonMeta
@@ -32,8 +34,24 @@ class CLItutorApp(App):
         super().__init__(**kwargs)
         self._loader = LessonLoader()
         self._progress = ProgressManager()
-        self._sandbox = SandboxManager()
+        self._docker_mode = self._docker_available()
+        self._sandbox: Union[DockerSandbox, SandboxManager] = (
+            DockerSandbox() if self._docker_mode else SandboxManager()
+        )
         self._lesson_metadata = self._loader.load_metadata()
+
+    @staticmethod
+    def _docker_available() -> bool:
+        """Check if Docker is available and running."""
+        try:
+            result = subprocess.run(
+                ["docker", "info"],
+                capture_output=True,
+                timeout=5,
+            )
+            return result.returncode == 0
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return False
 
     def on_mount(self) -> None:
         """Show the home screen on startup."""

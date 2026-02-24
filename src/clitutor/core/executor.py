@@ -6,7 +6,10 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from clitutor.core.docker_sandbox import DockerSandbox
 
 BLACKLIST_PATTERNS = [
     r"rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?/\s*$",
@@ -86,6 +89,60 @@ class CommandExecutor:
                 ["bash", "-c", command],
                 cwd=str(self.sandbox_path),
                 env=self._env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            return CommandResult(
+                command=command,
+                stdout=proc.stdout,
+                stderr=proc.stderr,
+                returncode=proc.returncode,
+            )
+        except subprocess.TimeoutExpired:
+            return CommandResult(
+                command=command,
+                stdout="",
+                stderr=f"Command timed out after {timeout} seconds.",
+                returncode=1,
+                timed_out=True,
+            )
+        except Exception as e:
+            return CommandResult(
+                command=command,
+                stdout="",
+                stderr=f"Error: {e}",
+                returncode=1,
+            )
+
+
+class DockerExecutor:
+    """Executes commands inside a Docker sandbox container."""
+
+    def __init__(self, sandbox: DockerSandbox) -> None:
+        self._sandbox = sandbox
+
+    @property
+    def sandbox_path(self) -> str:
+        return self._sandbox.path
+
+    def run(self, command: str, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
+        """Execute a command inside the Docker container."""
+        if self._sandbox.container_name is None:
+            return CommandResult(
+                command=command,
+                stdout="",
+                stderr="Docker container not running.",
+                returncode=1,
+            )
+        try:
+            proc = subprocess.run(
+                [
+                    "docker", "exec",
+                    "-w", self._sandbox.path,
+                    self._sandbox.container_name,
+                    "bash", "-c", command,
+                ],
                 capture_output=True,
                 text=True,
                 timeout=timeout,

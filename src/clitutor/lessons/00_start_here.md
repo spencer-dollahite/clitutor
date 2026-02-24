@@ -25,8 +25,8 @@ title: Print your current directory
 xp: 10
 difficulty: 1
 sandbox_setup: null
-validation_type: output_contains
-expected: /tmp/clitutor-sandbox
+validation_type: output_regex
+expected: (/tmp/clitutor-sandbox|/home/student/sandbox)
 hints:
   - "Think about what command shows WHERE you are."
   - "The command is three letters: Print Working Directory."
@@ -113,8 +113,8 @@ xp: 10
 difficulty: 1
 sandbox_setup:
   - "mkdir -p a/b/c"
-validation_type: output_contains
-expected: /tmp/clitutor-sandbox
+validation_type: output_regex
+expected: (/tmp/clitutor-sandbox|/home/student/sandbox)
 hints:
   - "You need to confirm your current directory."
   - "The command to print your working directory is three letters."

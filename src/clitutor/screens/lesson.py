@@ -6,7 +6,8 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Label, Static
 
-from clitutor.core.executor import CommandExecutor, CommandResult
+from clitutor.core.docker_sandbox import DockerSandbox
+from clitutor.core.executor import CommandExecutor, CommandResult, DockerExecutor
 from clitutor.core.sandbox import SandboxManager
 from clitutor.core.validator import OutputValidator, ValidationResult
 from clitutor.models.lesson import Exercise, LessonData
@@ -29,7 +30,7 @@ class LessonScreen(Screen):
         self,
         lesson: LessonData,
         progress_mgr: ProgressManager,
-        sandbox: SandboxManager,
+        sandbox: SandboxManager | DockerSandbox,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -37,11 +38,17 @@ class LessonScreen(Screen):
         self._progress = progress_mgr
         self._sandbox = sandbox
         self._current_exercise_idx = 0
-        self._executor = CommandExecutor(sandbox.path)
-        self._validator = OutputValidator(sandbox.path)
+        self._executor = self._make_executor()
+        self._validator = OutputValidator(sandbox)
 
         # Skip already-completed exercises
         self._advance_to_first_incomplete()
+
+    def _make_executor(self):
+        """Create the appropriate executor for the sandbox type."""
+        if isinstance(self._sandbox, DockerSandbox):
+            return DockerExecutor(self._sandbox)
+        return CommandExecutor(self._sandbox.path)
 
     def _advance_to_first_incomplete(self) -> None:
         """Skip to the first incomplete exercise."""
@@ -268,8 +275,8 @@ class LessonScreen(Screen):
     def _reset_sandbox(self) -> None:
         """Reset the sandbox and re-setup current exercise."""
         self._sandbox.reset()
-        self._executor = CommandExecutor(self._sandbox.path)
-        self._validator = OutputValidator(self._sandbox.path)
+        self._executor = self._make_executor()
+        self._validator = OutputValidator(self._sandbox)
         self._setup_current_exercise()
         self.query_one(TerminalPane).executor = self._executor
         self.query_one(TerminalPane).write_system_message("Sandbox reset.")
