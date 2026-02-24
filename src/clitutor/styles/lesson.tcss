@@ -103,7 +103,7 @@ HintOverlay {
     max-width: 80%;
     height: auto;
     max-height: 70%;
-    background: $surface;
+    background: #0a0a0a;
     border: thick $primary;
     padding: 1 2;
 }

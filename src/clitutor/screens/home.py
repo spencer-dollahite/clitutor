@@ -26,7 +26,7 @@ class ConfirmResetScreen(ModalScreen[bool]):
         width: 50;
         height: auto;
         padding: 1 2;
-        background: #1a1a1a;
+        background: #0a0a0a;
         border: solid #ff4444;
     }
     #confirm-dialog Label {
