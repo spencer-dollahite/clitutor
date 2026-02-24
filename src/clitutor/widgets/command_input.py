@@ -1,4 +1,4 @@
-"""Command input widget with $ prompt and history."""
+"""Command input widget with $ prompt, history, and tab-completion support."""
 from __future__ import annotations
 
 from typing import List
@@ -18,10 +18,18 @@ class CommandInput(Static):
             super().__init__()
             self.command = command
 
+    class TabCompletionRequested(Message):
+        """Posted when user presses Tab to request completion."""
+        def __init__(self, text: str, cursor_pos: int) -> None:
+            super().__init__()
+            self.text = text
+            self.cursor_pos = cursor_pos
+
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._history: List[str] = []
         self._history_index: int = -1
+        self._completing: bool = False
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="command-input-container"):
@@ -43,7 +51,16 @@ class CommandInput(Static):
         inp = self.query_one("#command-input", Input)
         if not inp.has_focus:
             return
-        if event.key == "up":
+        if event.key == "tab":
+            event.prevent_default()
+            event.stop()
+            if self._completing:
+                return
+            self._completing = True
+            self.post_message(
+                self.TabCompletionRequested(inp.value, inp.cursor_position)
+            )
+        elif event.key == "up":
             if self._history:
                 if self._history_index == -1:
                     self._history_index = len(self._history) - 1
@@ -62,6 +79,17 @@ class CommandInput(Static):
                     inp.value = self._history[self._history_index]
                     inp.cursor_position = len(inp.value)
             event.prevent_default()
+
+    def set_completion_result(self, new_value: str, cursor_pos: int) -> None:
+        """Apply a tab-completion result to the input field."""
+        inp = self.query_one("#command-input", Input)
+        inp.value = new_value
+        inp.cursor_position = cursor_pos
+        self._completing = False
+
+    def clear_completing(self) -> None:
+        """Reset the completing flag (no result to apply)."""
+        self._completing = False
 
     def focus_input(self) -> None:
         """Focus the command input field."""
