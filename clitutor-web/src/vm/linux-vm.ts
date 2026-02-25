@@ -267,17 +267,15 @@ export class LinuxVM {
     // Small delay for prompt to settle
     await new Promise((r) => setTimeout(r, 500));
 
-    // Ensure /home/student exists before writing bashrc
-    this.sendSerial("mkdir -p /home/student\n");
-    await new Promise((r) => setTimeout(r, 300));
-
-    // Write custom bashrc, source it (suppressing any errors), and clear
-    // the terminal so boot noise is hidden when the overlay lifts
+    // Write bashrc to /root/ (exists in 9p base image) — the bashrc itself
+    // sets HOME=/home/student and cd's there.  We create /home/student via
+    // serial since v86's create_file API can't write to paths outside the
+    // base image's directory tree.
     const bashrc = generateBashrc("/home/student", "student", "clitutor");
-    console.log("[LinuxVM] Writing bashrc to /home/student/.clitutor_bashrc (%d bytes)", bashrc.length);
-    await this.writeFile("/home/student/.clitutor_bashrc", bashrc);
+    console.log("[LinuxVM] Writing bashrc to /root/.clitutor_bashrc (%d bytes)", bashrc.length);
+    await this.writeFile("/root/.clitutor_bashrc", bashrc);
     console.log("[LinuxVM] Sending bashrc source command");
-    this.sendSerial(". /home/student/.clitutor_bashrc 2>/dev/null; clear\n");
+    this.sendSerial("mkdir -p /home/student; . /root/.clitutor_bashrc 2>/dev/null; clear\n");
 
     // Mark VM as ready
     (window as any).__vmReady = true;

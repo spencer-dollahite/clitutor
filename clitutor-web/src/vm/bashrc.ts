@@ -24,7 +24,8 @@ export TERM="xterm-256color"
 _esc=$(printf '\\033')
 
 # ── Colored prompt (rebuilt each time via PROMPT_COMMAND) ───
-PS1="\${_esc}[01;32m${user}@${hostname}\${_esc}[00m:\${_esc}[01;34m${sandboxPath}\${_esc}[00m\\$ "
+# Initial PS1 uses ~ since we start in $HOME
+PS1="\${_esc}[01;32m${user}@${hostname}\${_esc}[00m:\${_esc}[01;34m~\${_esc}[00m\\$ "
 
 # ── Colors and aliases ──────────────────────────────────────
 alias ls='ls --color=auto'
@@ -45,7 +46,9 @@ HISTSIZE=1000
 __clitutor_prompt_cmd() {
     local rc=$?
     printf '\\x1f${CMD_END_SENTINEL}:%d:%s\\x1f' "$rc" "$PWD"
-    PS1="\${_esc}[01;32m${user}@${hostname}\${_esc}[00m:\${_esc}[01;34m$PWD\${_esc}[00m\\$ "
+    _cwd=$PWD
+    case "$_cwd" in "$HOME"*) _cwd="~\${_cwd#$HOME}";; esac
+    PS1="\${_esc}[01;32m${user}@${hostname}\${_esc}[00m:\${_esc}[01;34m$_cwd\${_esc}[00m\\$ "
     printf '\\x1f${CMD_START_SENTINEL}\\x1f'
 }
 PROMPT_COMMAND="__clitutor_prompt_cmd"
