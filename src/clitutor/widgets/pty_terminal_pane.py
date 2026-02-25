@@ -288,9 +288,20 @@ class PtyTerminalPane(Widget, can_focus=True):
 
     def _on_pty_output(self, data: bytes) -> None:
         """Called (from event loop reader) when PTY produces output."""
-        # Extract sentinels, feed the rest to pyte
-        remaining = data
+        # Process data and sentinels in the order they appear so that
+        # only bytes between CMD_START and CMD_END are captured.
+        display_parts: list[bytes] = []
+        last_end = 0
+
         for match in _SENTINEL_RE.finditer(data):
+            # Handle the data segment before this sentinel
+            segment = data[last_end:match.start()]
+            if segment:
+                if self._capturing:
+                    self._captured_chunks.append(segment)
+                display_parts.append(segment)
+
+            # Handle the sentinel itself
             sentinel_body = match.group(1).decode("utf-8", errors="replace")
             if sentinel_body == CMD_START_SENTINEL:
                 self._capturing = True
@@ -302,12 +313,17 @@ class PtyTerminalPane(Widget, can_focus=True):
                 self._cwd = new_cwd
                 self._finish_capture(exit_code)
 
-        # Strip sentinels from data before feeding to pyte
-        clean = _SENTINEL_RE.sub(b"", remaining)
+            last_end = match.end()
 
-        if self._capturing and clean:
-            self._captured_chunks.append(clean)
+        # Handle any data after the last sentinel
+        tail = data[last_end:]
+        if tail:
+            if self._capturing:
+                self._captured_chunks.append(tail)
+            display_parts.append(tail)
 
+        # Feed non-sentinel data to pyte for display
+        clean = b"".join(display_parts)
         if clean:
             try:
                 self._stream.feed(clean.decode("utf-8", errors="replace"))
