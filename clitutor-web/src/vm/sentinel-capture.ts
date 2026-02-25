@@ -4,9 +4,9 @@ import { CMD_START_SENTINEL, CMD_END_SENTINEL, SENTINEL_CHAR } from "./bashrc";
 import { createCommandResult, type CommandResult } from "../core/models";
 
 // ANSI stripping patterns (used to clean captured output for validation)
-const ANSI_CSI_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
+const ANSI_CSI_RE = /\x1b\[[\x20-\x3f]*[\x40-\x7e]/g; // handles standard + private CSI (e.g. \x1b[?2004l)
 const ANSI_OSC_RE = /\x1b\][^\x07]*\x07/g;
-const CTRL_CHAR_RE = /[\x00-\x08\x0e-\x1f]/g;
+const CTRL_CHAR_RE = /[\x00-\x08\x0b-\x1f]/g; // includes \r (0x0d), excludes \t and \n
 
 // Build sentinel regex to match: \x1f(CMD_START|CMD_END:exitcode:cwd)\x1f
 const SENTINEL_RE = new RegExp(
@@ -121,9 +121,13 @@ export class SentinelCapture {
 
     // Clean output for validation
     let text = rawChunks.join("");
+    console.log("[SentinelCapture] raw chunks:", JSON.stringify(rawChunks));
+    console.log("[SentinelCapture] joined text:", JSON.stringify(text));
+
     text = text.replace(ANSI_CSI_RE, "");
     text = text.replace(ANSI_OSC_RE, "");
     text = text.replace(CTRL_CHAR_RE, "");
+    console.log("[SentinelCapture] after ANSI/ctrl strip:", JSON.stringify(text));
 
     // CMD_START fires from PROMPT_COMMAND (before the prompt), so the
     // capture includes the prompt line + echoed user command.  Strip
@@ -132,12 +136,14 @@ export class SentinelCapture {
     if (nlIdx !== -1) {
       text = text.slice(nlIdx + 1);
     }
+    console.log("[SentinelCapture] after first-line strip (nlIdx=%d):", nlIdx, JSON.stringify(text));
 
     const result = createCommandResult({
       stdout: text,
       returncode: exitCode,
       cwd: this.cwd,
     });
+    console.log("[SentinelCapture] result:", { stdout: JSON.stringify(result.stdout), returncode: result.returncode, cwd: result.cwd });
 
     this.onCommand?.(result);
   }

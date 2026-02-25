@@ -275,7 +275,7 @@ export class LinuxVM {
     console.log("[LinuxVM] Writing bashrc to /root/.clitutor_bashrc (%d bytes)", bashrc.length);
     await this.writeFile("/root/.clitutor_bashrc", bashrc);
     console.log("[LinuxVM] Sending bashrc source command");
-    this.sendSerial("mkdir -p /home/student; . /root/.clitutor_bashrc 2>/dev/null; clear\n");
+    this.sendSerial("mkdir -p /home/student; . /root/.clitutor_bashrc 2>/dev/null\n");
 
     // Mark VM as ready
     (window as any).__vmReady = true;

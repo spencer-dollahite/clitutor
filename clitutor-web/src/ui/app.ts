@@ -127,7 +127,7 @@ export class App {
     await this.seedLessonSetup(lesson);
 
     // Clear xterm.js display directly (synchronous, no serial race)
-    this.terminalPane?.term.write('\x1b[2J\x1b[H');
+    this.terminalPane?.term.clear();
 
     // VM is ready — hide boot overlay, focus terminal
     console.log("[App] Hiding boot overlay, focusing terminal");
@@ -573,7 +573,7 @@ export class App {
     // Seed lesson files silently when switching lessons (not pre-seeded)
     if (!preloaded) {
       await this.seedLessonSetup(lesson, true);
-      this.terminalPane?.term.write('\x1b[2J\x1b[H');
+      this.terminalPane?.term.clear();
     }
 
     // Show lesson content in sidebar
@@ -658,7 +658,7 @@ export class App {
     const script = commands.join("\n") + "\n";
     await this.vm.writeFile("/tmp/_clitutor_seed.sh", script);
     this.vm.sendSerial(
-      "bash /tmp/_clitutor_seed.sh >/dev/null 2>&1; rm -f /tmp/_clitutor_seed.sh\n",
+      "sh /tmp/_clitutor_seed.sh >/dev/null 2>&1; rm -f /tmp/_clitutor_seed.sh\n",
     );
 
     // Wait for execution (longer for git operations)
@@ -697,7 +697,7 @@ export class App {
     if (!this.vm || !this.currentLesson) return;
     this.sentinel.queueSystemMessage("Resetting sandbox...");
     await this.seedLessonSetup(this.currentLesson, true);
-    this.terminalPane?.term.write('\x1b[2J\x1b[H');
+    this.terminalPane?.term.clear();
     this.sentinel.queueSystemMessage("Sandbox reset.");
     this.sentinel.skipNextCapture();
     this.vm.sendSerial('\n');
