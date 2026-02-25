@@ -635,11 +635,11 @@ export class App {
 
     const commands: string[] = [];
     if (clean) {
-      commands.push("cd /root && rm -rf /root/* /root/.* 2>/dev/null");
+      commands.push("cd /home/student && rm -rf /home/student/* /home/student/.* 2>/dev/null");
     }
     for (const ex of lesson.exercises) {
       if (ex.sandbox_setup && ex.sandbox_setup.length > 0) {
-        commands.push("cd /root");
+        commands.push("cd /home/student");
         commands.push(...ex.sandbox_setup);
       }
     }
