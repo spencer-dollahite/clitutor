@@ -15,8 +15,19 @@ from clitutor.models.progress import ProgressManager
 from clitutor.models.xp import calculate_xp, get_level_info
 from clitutor.widgets.hint_overlay import HintOverlay
 from clitutor.widgets.markdown_pane import MarkdownPane
-from clitutor.widgets.terminal_pane import SlashCommand, TerminalPane
+from clitutor.widgets.pty_terminal_pane import PtyTerminalPane
 from clitutor.widgets.xp_bar import XPBar
+
+
+class _CwdProxy:
+    """Adapter so OutputValidator can read cwd from PtyTerminalPane."""
+
+    def __init__(self, terminal: PtyTerminalPane) -> None:
+        self._terminal = terminal
+
+    @property
+    def cwd(self) -> str:
+        return self._terminal.cwd
 
 
 class LessonScreen(Screen):
@@ -38,8 +49,8 @@ class LessonScreen(Screen):
         self._progress = progress_mgr
         self._sandbox = sandbox
         self._current_exercise_idx = 0
+        # Executor is kept for sandbox_setup commands (background, invisible)
         self._executor = self._make_executor()
-        self._validator = OutputValidator(sandbox, executor=self._executor)
 
         # Skip already-completed exercises
         self._advance_to_first_incomplete()
@@ -74,10 +85,30 @@ class LessonScreen(Screen):
                     id="markdown-content",
                 )
                 yield Label("", id="exercise-indicator")
-            yield TerminalPane(self._executor, id="terminal-pane")
+
+            # Determine sandbox params for the PTY terminal
+            sandbox_path = str(self._sandbox.path)
+            if isinstance(self._sandbox, DockerSandbox):
+                yield PtyTerminalPane(
+                    sandbox_path=sandbox_path,
+                    sandbox_type="docker",
+                    docker_container=self._sandbox.container_name,
+                    id="terminal-pane",
+                )
+            else:
+                yield PtyTerminalPane(
+                    sandbox_path=sandbox_path,
+                    sandbox_type="local",
+                    id="terminal-pane",
+                )
         yield Footer()
 
     def on_mount(self) -> None:
+        # Wire up the validator with cwd proxy pointing at the PTY terminal
+        terminal = self.query_one(PtyTerminalPane)
+        cwd_proxy = _CwdProxy(terminal)
+        self._validator = OutputValidator(self._sandbox, executor=cwd_proxy)
+
         self._setup_current_exercise()
         # Always default cursor to terminal input
         self._focus_terminal()
@@ -91,12 +122,12 @@ class LessonScreen(Screen):
         self._focus_terminal()
 
     def _focus_terminal(self) -> None:
-        """Send focus to the terminal command input."""
+        """Send focus to the terminal widget."""
         self.set_timer(0.05, self._do_focus_terminal)
 
     def _do_focus_terminal(self) -> None:
         try:
-            self.query_one(TerminalPane).focus_input()
+            self.query_one(PtyTerminalPane).focus()
         except Exception:
             pass
 
@@ -117,10 +148,10 @@ class LessonScreen(Screen):
         ex.hints_used = 0
         ex.completed = False
 
-        # Reset cwd to sandbox root for a clean exercise start
+        # Reset executor cwd for sandbox_setup commands
         self._executor.reset_cwd()
 
-        # Set up sandbox for exercise
+        # Set up sandbox for exercise (background, not visible in PTY)
         if ex.sandbox_setup:
             for cmd in ex.sandbox_setup:
                 self._executor.run(cmd)
@@ -134,9 +165,8 @@ class LessonScreen(Screen):
             f"[bold] Exercise {completed + 1}/{total}: {ex.title} [/]"
         )
 
-        # Show exercise prompt in terminal and update prompt after cwd reset
-        terminal = self.query_one(TerminalPane)
-        terminal.update_prompt()
+        # Show exercise prompt in terminal
+        terminal = self.query_one(PtyTerminalPane)
         terminal.write_system_message(f"--- Exercise {completed + 1}: {ex.title} ---")
 
     def _seed_lesson_assets(self) -> None:
@@ -148,8 +178,8 @@ class LessonScreen(Screen):
         if self._lesson.id == "06_scripting":
             self._sandbox.seed_asset("sample_script.sh")
 
-    def on_terminal_pane_command_completed(
-        self, event: TerminalPane.CommandCompleted
+    def on_pty_terminal_pane_command_completed(
+        self, event: PtyTerminalPane.CommandCompleted
     ) -> None:
         """Validate command result against current exercise."""
         ex = self.current_exercise
@@ -163,7 +193,7 @@ class LessonScreen(Screen):
         ex.attempts += 1
         validation = self._validator.validate(ex, result)
 
-        terminal = self.query_one(TerminalPane)
+        terminal = self.query_one(PtyTerminalPane)
 
         if validation.passed:
             # Calculate XP
@@ -228,10 +258,12 @@ class LessonScreen(Screen):
             ex.first_try = False
             terminal.write_system_message(f"✗ {validation.message} Try again!")
 
-    def on_slash_command(self, event: SlashCommand) -> None:
-        """Handle slash commands."""
+    def on_pty_terminal_pane_slash_command(
+        self, event: PtyTerminalPane.SlashCommand
+    ) -> None:
+        """Handle slash commands from the PTY terminal."""
         cmd = event.command.strip().lower()
-        terminal = self.query_one(TerminalPane)
+        terminal = self.query_one(PtyTerminalPane)
 
         if cmd == "/hint":
             self._show_hint()
@@ -253,12 +285,13 @@ class LessonScreen(Screen):
     def _show_hint(self) -> None:
         """Show the hint overlay for the current exercise."""
         ex = self.current_exercise
+        terminal = self.query_one(PtyTerminalPane)
         if ex is None:
-            self.query_one(TerminalPane).write_system_message("No active exercise.")
+            terminal.write_system_message("No active exercise.")
             return
 
         if not ex.hints:
-            self.query_one(TerminalPane).write_system_message(
+            terminal.write_system_message(
                 "No hints available for this exercise."
             )
             return
@@ -277,19 +310,23 @@ class LessonScreen(Screen):
         self.app.push_screen(overlay, callback=on_dismiss)
 
     def _reset_sandbox(self) -> None:
-        """Reset the sandbox and re-setup current exercise."""
+        """Reset the sandbox and respawn the PTY."""
         self._sandbox.reset()
         self._executor = self._make_executor()
-        self._validator = OutputValidator(self._sandbox, executor=self._executor)
+
+        terminal = self.query_one(PtyTerminalPane)
+        terminal.respawn(str(self._sandbox.path))
+
+        # Rewire validator with cwd proxy
+        cwd_proxy = _CwdProxy(terminal)
+        self._validator = OutputValidator(self._sandbox, executor=cwd_proxy)
+
         self._setup_current_exercise()
-        terminal = self.query_one(TerminalPane)
-        terminal.executor = self._executor
-        terminal.update_prompt()
         terminal.write_system_message("Sandbox reset.")
 
     def _show_progress(self) -> None:
         """Show current lesson progress."""
-        terminal = self.query_one(TerminalPane)
+        terminal = self.query_one(PtyTerminalPane)
         total = len(self._lesson.exercises)
         done = sum(
             1 for ex in self._lesson.exercises
@@ -305,7 +342,7 @@ class LessonScreen(Screen):
         ex = self.current_exercise
         if ex is None:
             return
-        terminal = self.query_one(TerminalPane)
+        terminal = self.query_one(PtyTerminalPane)
         terminal.write_system_message(f"Skipped: {ex.title} (0 XP)")
         self._current_exercise_idx += 1
         if self.current_exercise is not None:

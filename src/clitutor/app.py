@@ -2,17 +2,18 @@
 from __future__ import annotations
 
 import subprocess
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from textual.app import App
 
-from clitutor.core.docker_sandbox import DockerSandbox
 from clitutor.core.loader import LessonLoader
-from clitutor.core.sandbox import SandboxManager
-from clitutor.models.lesson import LessonMeta
 from clitutor.models.progress import ProgressManager
 from clitutor.screens.home import HomeScreen
-from clitutor.screens.lesson import LessonScreen
+
+if TYPE_CHECKING:
+    from clitutor.core.docker_sandbox import DockerSandbox
+    from clitutor.core.sandbox import SandboxManager
+    from clitutor.models.lesson import LessonMeta
 
 
 class CLItutorApp(App):
@@ -26,19 +27,27 @@ class CLItutorApp(App):
     ]
 
     BINDINGS = [
-        ("ctrl+c", "quit", "Quit"),
-        ("ctrl+d", "quit", "Quit"),
+        ("ctrl+q", "quit", "Quit"),
     ]
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._loader = LessonLoader()
         self._progress = ProgressManager()
-        self._docker_mode = self._docker_available()
-        self._sandbox: Union[DockerSandbox, SandboxManager] = (
-            DockerSandbox() if self._docker_mode else SandboxManager()
-        )
         self._lesson_metadata = self._loader.load_metadata()
+        # Sandbox is created lazily on first lesson open
+        self._sandbox: Union[DockerSandbox, SandboxManager, None] = None
+
+    def _ensure_sandbox(self) -> Union[DockerSandbox, SandboxManager]:
+        """Create sandbox on first use (defers docker check from startup)."""
+        if self._sandbox is None:
+            if self._docker_available():
+                from clitutor.core.docker_sandbox import DockerSandbox
+                self._sandbox = DockerSandbox()
+            else:
+                from clitutor.core.sandbox import SandboxManager
+                self._sandbox = SandboxManager()
+        return self._sandbox
 
     @staticmethod
     def _docker_available() -> bool:
@@ -47,7 +56,7 @@ class CLItutorApp(App):
             result = subprocess.run(
                 ["docker", "info"],
                 capture_output=True,
-                timeout=5,
+                timeout=3,
             )
             return result.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -70,16 +79,19 @@ class CLItutorApp(App):
 
     def open_lesson(self, meta: LessonMeta) -> None:
         """Open a lesson screen."""
+        from clitutor.screens.lesson import LessonScreen
+
         lesson = self._loader.load_lesson(meta)
 
-        # Create fresh sandbox
-        self._sandbox.cleanup()
-        self._sandbox.create()
+        # Create fresh sandbox (first call also runs docker check)
+        sandbox = self._ensure_sandbox()
+        sandbox.cleanup()
+        sandbox.create()
 
         screen = LessonScreen(
             lesson=lesson,
             progress_mgr=self._progress,
-            sandbox=self._sandbox,
+            sandbox=sandbox,
         )
         self.push_screen(screen)
 
@@ -95,7 +107,8 @@ class CLItutorApp(App):
 
     def on_unmount(self) -> None:
         """Clean up sandbox on exit."""
-        self._sandbox.cleanup()
+        if self._sandbox is not None:
+            self._sandbox.cleanup()
 
 
 def main() -> None:

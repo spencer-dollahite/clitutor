@@ -9,7 +9,7 @@ from typing import List, Optional
 
 
 IMAGE_NAME = "clitutor-sandbox"
-SANDBOX_DIR = "/home/student/sandbox"
+SANDBOX_DIR = "/home/student"
 
 
 class DockerSandbox:

@@ -18,10 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd -m -s /bin/bash student \
     && echo "student ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Set up working directory
-RUN mkdir -p /home/student/sandbox && chown student:student /home/student/sandbox
-
 USER student
-WORKDIR /home/student/sandbox
+WORKDIR /home/student
 
 CMD ["sleep", "infinity"]
