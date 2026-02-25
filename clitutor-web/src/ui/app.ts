@@ -50,7 +50,7 @@ export class App {
 
   constructor(root: HTMLElement) {
     this.root = root;
-    this.loader = new LessonLoader("/lessons");
+    this.loader = new LessonLoader(import.meta.env.BASE_URL + "lessons");
     this.progress = new ProgressManager();
     this.sentinel = new SentinelCapture();
     this.hintOverlay = new HintOverlay();

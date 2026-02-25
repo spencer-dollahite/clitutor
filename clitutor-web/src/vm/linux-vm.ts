@@ -24,13 +24,15 @@ export interface LinuxVMOptions {
   networkRelay?: string | null;
 }
 
+const BASE = import.meta.env.BASE_URL;
+
 const DEFAULT_OPTS: Required<LinuxVMOptions> = {
-  wasmPath: "/v86/v86.wasm",
-  biosPath: "/v86/seabios.bin",
-  vgaBiosPath: "/v86/vgabios.bin",
-  fsBaseUrl: "/v86/alpine-rootfs-flat/",
-  fsManifest: "/v86/alpine-fs.json",
-  statePath: "/v86/alpine-state.bin",
+  wasmPath: `${BASE}v86/v86.wasm`,
+  biosPath: `${BASE}v86/seabios.bin`,
+  vgaBiosPath: `${BASE}v86/vgabios.bin`,
+  fsBaseUrl: `${BASE}v86/alpine-rootfs-flat/`,
+  fsManifest: `${BASE}v86/alpine-fs.json`,
+  statePath: `${BASE}v86/alpine-state.bin`,
   memorySize: 512 * 1024 * 1024,
   networkRelay: null,
 };
