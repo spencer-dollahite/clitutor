@@ -20,18 +20,23 @@ exercises, and track their progress — all without leaving the TUI.
 
 ## Quick Start
 
-The bootstrap script handles everything — finding (or installing) Python,
-creating a virtualenv, installing dependencies, and launching the app:
+Clone and run — one command does it all:
 
 ```bash
-./bootstrap.sh
+git clone https://github.com/spencer-dollahite/clitutor.git && cd clitutor && ./bootstrap.sh
 ```
 
-### Manual Installation
+The bootstrap script finds (or installs) Python, creates a virtualenv, installs
+dependencies, and launches the app automatically.
+
+<details>
+<summary>Manual installation</summary>
 
 Requires **Python 3.8+**.
 
 ```bash
+git clone https://github.com/spencer-dollahite/clitutor.git
+cd clitutor
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -44,6 +49,8 @@ clitutor          # installed entry point
 # or
 python -m clitutor
 ```
+
+</details>
 
 ## Lessons
 
