@@ -28,8 +28,39 @@ def generate_bashrc(
         export HOME="{sandbox_path}"
         export PATH="/usr/local/bin:/usr/bin:/bin"
         export TERM="xterm-256color"
-        export PS1="{user}@{hostname}:\\w\\$ "
 
+        # ── Colored prompt ──────────────────────────────────────────
+        export PS1='\\[\\033[01;32m\\]{user}@{hostname}\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '
+
+        # ── Colors and aliases ──────────────────────────────────────
+        alias ls='ls --color=auto'
+        alias grep='grep --color=auto'
+        alias fgrep='fgrep --color=auto'
+        alias egrep='egrep --color=auto'
+        alias ll='ls -alF'
+        alias la='ls -A'
+        alias l='ls -CF'
+
+        # colored GCC warnings and errors
+        export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+        # ── History settings ────────────────────────────────────────
+        HISTCONTROL=ignoreboth
+        HISTSIZE=1000
+        shopt -s histappend
+
+        # check the window size after each command
+        shopt -s checkwinsize
+
+        # make less friendlier for non-text input files
+        [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+        # enable programmable completion if available
+        if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+            . /etc/bash_completion
+        fi
+
+        # ── CLItutor sentinel machinery ─────────────────────────────
         # Emit sentinel before each command executes
         PS0=$'\\x1f{CMD_START_SENTINEL}\\x1f'
 
