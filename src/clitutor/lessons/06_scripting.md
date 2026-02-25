@@ -165,8 +165,8 @@ title: For loop script
 xp: 20
 difficulty: 3
 sandbox_setup: null
-validation_type: output_contains
-expected: "3"
+validation_type: output_regex
+expected: "(^|\\n)3\\s*(\\n|$)"
 hints:
   - "Write a script with a for loop that iterates over numbers."
   - "Use: for i in 1 2 3; do echo $i; done."

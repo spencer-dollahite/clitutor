@@ -91,7 +91,7 @@ xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: output_regex
-expected: "^\\d+$"
+expected: "^\\s*\\d+\\s*$"
 hints:
   - "Replace colons with newlines, then count the lines."
   - "Use echo $PATH piped through tr to replace colons, then wc -l."
@@ -159,8 +159,8 @@ title: Use the full path
 xp: 10
 difficulty: 2
 sandbox_setup: null
-validation_type: output_contains
-expected: "/"
+validation_type: output_regex
+expected: "^/"
 hints:
   - "Instead of just typing a command name, use its absolute path."
   - "Use which to find the path, then use that full path."

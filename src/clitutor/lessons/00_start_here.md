@@ -86,15 +86,15 @@ xp: 15
 difficulty: 1
 sandbox_setup:
   - "mkdir -p projects/webapp"
-validation_type: output_contains
-expected: projects
+validation_type: cwd_regex
+expected: "/(subdir|projects|webapp|docs|a)(/|$)"
 hints:
-  - "You need to change into the 'projects' directory and then verify where you are."
-  - "Use cd followed by the directory name, then use pwd."
-  - "Type: `cd projects && pwd`"
+  - "You need to change into a subdirectory. Use ls to see what's available."
+  - "Use cd followed by the directory name."
+  - "Type: `cd projects`"
 -->
 ### Exercise 3: Change to a subdirectory
-Change into the `projects` directory and print your new working directory.
+Change into any subdirectory (use `ls` to see what's available).
 
 ---
 
@@ -138,8 +138,8 @@ xp: 10
 difficulty: 1
 sandbox_setup:
   - "touch .hidden_file visible_file"
-validation_type: output_contains
-expected: .hidden_file
+validation_type: output_regex
+expected: (^|\s)\.\.(\s|$)
 hints:
   - "You need a flag that shows ALL files including hidden ones."
   - "Hidden files start with a dot. The flag to show them also starts with 'a'."
@@ -170,8 +170,8 @@ difficulty: 1
 sandbox_setup:
   - "echo 'hello world' > greeting.txt"
   - "mkdir docs"
-validation_type: output_contains
-expected: greeting.txt
+validation_type: output_regex
+expected: total \d+
 hints:
   - "Use the long-format flag with ls."
   - "The flag for a long listing is -l."

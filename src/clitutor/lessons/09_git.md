@@ -91,7 +91,7 @@ xp: 20
 difficulty: 2
 sandbox_setup:
   - "git init myrepo"
-  - "cd myrepo && touch README.md && git add README.md"
+  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md"
 validation_type: output_contains
 expected: "initial commit"
 hints:
@@ -121,7 +121,7 @@ xp: 10
 difficulty: 2
 sandbox_setup:
   - "git init myrepo"
-  - "cd myrepo && touch README.md && git add README.md && git commit -m 'initial commit'"
+  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
 validation_type: output_contains
 expected: initial commit
 hints:
@@ -154,7 +154,7 @@ xp: 15
 difficulty: 3
 sandbox_setup:
   - "git init myrepo"
-  - "cd myrepo && touch README.md && git add README.md && git commit -m 'initial commit'"
+  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
 validation_type: output_contains
 expected: feature
 hints:
@@ -190,16 +190,16 @@ title: Merge a branch
 xp: 20
 difficulty: 3
 sandbox_setup:
-  - "git init myrepo"
-  - "cd myrepo && touch README.md && git add README.md && git commit -m 'initial commit'"
+  - "git init -b main myrepo"
+  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
   - "cd myrepo && git checkout -b feature"
   - "cd myrepo && echo 'new feature' > feature.txt && git add feature.txt && git commit -m 'add feature'"
 validation_type: output_contains
 expected: feature.txt
 hints:
-  - "Switch back to main/master and merge the feature branch."
+  - "Switch back to the main branch and merge the feature branch."
   - "Use git checkout then git merge."
-  - "Type: `cd myrepo && git checkout master && git merge feature && ls`"
+  - "Type: `cd myrepo && git checkout main && git merge feature && ls`"
 -->
 ### Exercise 6: Merge a branch
 Switch back to the main branch in `myrepo` and merge the `feature` branch. List files to confirm.

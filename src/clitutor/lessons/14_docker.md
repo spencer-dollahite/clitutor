@@ -216,7 +216,7 @@ xp: 25
 difficulty: 4
 sandbox_setup: null
 validation_type: file_contains
-expected: docker-compose.yml::services:
+expected: "docker-compose.yml::services:"
 hints:
   - "Create a docker-compose.yml with a service definition."
   - "Use YAML format with version and services sections."

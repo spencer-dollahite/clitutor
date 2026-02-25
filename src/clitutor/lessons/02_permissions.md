@@ -186,8 +186,8 @@ title: Create a sticky directory
 xp: 15
 difficulty: 2
 sandbox_setup: null
-validation_type: output_contains
-expected: "t"
+validation_type: output_regex
+expected: "d.{8}[tT]"
 hints:
   - "Create a directory and set the sticky bit on it."
   - "Use mkdir then chmod 1777, then ls -ld to verify."

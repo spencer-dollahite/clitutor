@@ -40,7 +40,9 @@ class OutputValidator:
             "exit_code": self._check_exit_code,
         }
 
-        if vtype == "file_exists":
+        if vtype == "cwd_regex":
+            return self._check_cwd_regex(expected)
+        elif vtype == "file_exists":
             return self._check_file_exists(expected)
         elif vtype == "file_contains":
             return self._check_file_contains(expected)
@@ -144,6 +146,15 @@ class OutputValidator:
             False,
             f"No file found containing '{expected.strip()}'.",
         )
+
+    def _check_cwd_regex(self, expected: str) -> ValidationResult:
+        """Check that the executor's current working directory matches a regex."""
+        if not self._executor:
+            return ValidationResult(False, "Cannot determine current directory.")
+        cwd = self._executor.cwd
+        if re.search(expected, cwd):
+            return ValidationResult(True, "Correct!")
+        return ValidationResult(False, "You haven't changed into the right directory yet.")
 
     def _check_exit_code(self, result: CommandResult, expected: str) -> ValidationResult:
         try:

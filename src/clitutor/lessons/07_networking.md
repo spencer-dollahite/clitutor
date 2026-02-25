@@ -133,8 +133,8 @@ title: Look up a domain
 xp: 15
 difficulty: 2
 sandbox_setup: null
-validation_type: output_contains
-expected: Address
+validation_type: output_regex
+expected: "\\d+\\.\\d+\\.\\d+\\.\\d+"
 hints:
   - "Use a DNS lookup tool to resolve a domain name."
   - "nslookup is a simple DNS query tool."

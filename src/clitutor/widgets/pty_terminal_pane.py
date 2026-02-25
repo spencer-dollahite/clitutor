@@ -4,9 +4,11 @@ from __future__ import annotations
 import os
 import re
 import tempfile
+from functools import lru_cache
 from typing import Optional
 
 import pyte
+from rich.segment import Segment
 from rich.style import Style
 from rich.text import Text
 from textual.message import Message
@@ -34,6 +36,11 @@ _SENTINEL_RE = re.compile(
     + SENTINEL_CHAR.encode()
 )
 
+# Pre-compiled ANSI stripping patterns (used in _finish_capture)
+_ANSI_CSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+_ANSI_OSC_RE = re.compile(r"\x1b\][^\x07]*\x07")
+_CTRL_CHAR_RE = re.compile(r"[\x00-\x08\x0e-\x1f]")
+
 # Map pyte color names to Rich color names
 _PYTE_COLOR_MAP = {
     "black": "black",
@@ -56,7 +63,7 @@ _PYTE_COLOR_MAP = {
     "brightwhite": "bright_white",
 }
 
-# Special key → escape sequence mapping
+# Special key -> escape sequence mapping
 _KEY_MAP = {
     "up": b"\x1b[A",
     "down": b"\x1b[B",
@@ -80,13 +87,13 @@ _KEY_MAP = {
     "f10": b"\x1b[21~",
     "f11": b"\x1b[23~",
     "f12": b"\x1b[24~",
-    "escape": b"\x1b",
     "tab": b"\t",
     "enter": b"\r",
     "backspace": b"\x7f",
 }
 
 
+@lru_cache(maxsize=256)
 def _pyte_color_to_rich(color: str) -> Optional[str]:
     """Convert a pyte color value to a Rich color string."""
     if not color or color == "default":
@@ -110,6 +117,32 @@ def _pyte_color_to_rich(color: str) -> Optional[str]:
         except ValueError:
             pass
     return None
+
+
+# Style cache: (fg, bg, bold, italic, underline, strike, reverse) -> Style
+_style_cache: dict[tuple, Style] = {}
+
+
+def _get_style(fg_raw: str, bg_raw: str, bold: bool, italic: bool,
+               underline: bool, strike: bool, reverse: bool) -> tuple[Style, tuple]:
+    """Return a cached Style and its key for the given pyte character attributes."""
+    key = (fg_raw, bg_raw, bold, italic, underline, strike, reverse)
+    cached = _style_cache.get(key)
+    if cached is not None:
+        return cached, key
+    fg = _pyte_color_to_rich(fg_raw) if fg_raw != "default" else None
+    bg = _pyte_color_to_rich(bg_raw) if bg_raw != "default" else None
+    style = Style(
+        color=fg or ("white" if not reverse else "black"),
+        bgcolor=bg or ("#000000" if not reverse else "white"),
+        bold=bold,
+        italic=italic,
+        underline=underline,
+        strike=strike,
+        reverse=reverse,
+    )
+    _style_cache[key] = style
+    return style, key
 
 
 class PtyTerminalPane(Widget, can_focus=True):
@@ -170,8 +203,16 @@ class PtyTerminalPane(Widget, can_focus=True):
         # Messages queued before the PTY prompt is ready
         self._pending_messages: list[str] = []
 
+        # Buffered system messages for batched display
+        self._msg_buffer: list[str] = []
+        self._msg_flush_scheduled = False
+
         # Input line buffer for slash command detection
         self._input_buffer = ""
+
+        # Performance: debounced refresh and dirty-line cache
+        self._refresh_pending = False
+        self._line_cache: dict[int, Strip] = {}
 
     @property
     def cwd(self) -> str:
@@ -251,7 +292,6 @@ class PtyTerminalPane(Widget, can_focus=True):
                     "bash",
                     "--rcfile",
                     "/tmp/clitutor.bashrc",
-                    "--noediting",
                 ],
             )
         else:
@@ -329,7 +369,11 @@ class PtyTerminalPane(Widget, can_focus=True):
                 self._stream.feed(clean.decode("utf-8", errors="replace"))
             except Exception:
                 pass
-            self.refresh()
+            # Evict dirty lines from cache, then clear dirty set
+            for row in self._screen.dirty:
+                self._line_cache.pop(row, None)
+            self._screen.dirty.clear()
+            self._schedule_refresh()
 
     def _finish_capture(self, exit_code: int) -> None:
         """Build a CommandResult from captured output and post it."""
@@ -337,7 +381,7 @@ class PtyTerminalPane(Widget, can_focus=True):
         self._captured_chunks_raw = self._captured_chunks
         self._captured_chunks = []
 
-        # Skip internal captures (bash startup sentinel, _msg commands)
+        # Skip internal captures (bash startup sentinel, prompt repaints)
         if self._skip_captures > 0:
             self._skip_captures -= 1
             if not self._pty_ready:
@@ -348,9 +392,9 @@ class PtyTerminalPane(Widget, can_focus=True):
         raw = b"".join(self._captured_chunks_raw)
         # Strip ANSI escape sequences to get plain text for validation
         text = raw.decode("utf-8", errors="replace")
-        text = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
-        text = re.sub(r"\x1b\][^\x07]*\x07", "", text)  # OSC sequences
-        text = re.sub(r"[\x00-\x08\x0e-\x1f]", "", text)  # control chars
+        text = _ANSI_CSI_RE.sub("", text)
+        text = _ANSI_OSC_RE.sub("", text)
+        text = _CTRL_CHAR_RE.sub("", text)
 
         result = CommandResult(
             command="",
@@ -364,8 +408,19 @@ class PtyTerminalPane(Widget, can_focus=True):
         """Handle PTY process exit."""
         pass
 
+    def _schedule_refresh(self) -> None:
+        """Coalesce multiple PTY reads into a single refresh (~8ms)."""
+        if not self._refresh_pending:
+            self._refresh_pending = True
+            self.set_timer(0.008, self._do_deferred_refresh)
+
+    def _do_deferred_refresh(self) -> None:
+        """Execute the deferred refresh."""
+        self._refresh_pending = False
+        self.refresh()
+
     # ------------------------------------------------------------------
-    # Rendering — convert pyte screen to Textual Strips
+    # Rendering -- convert pyte screen to Textual Strips
     # ------------------------------------------------------------------
 
     def get_content_width(self, container, viewport):
@@ -375,58 +430,81 @@ class PtyTerminalPane(Widget, can_focus=True):
         return self._screen.lines
 
     def render_line(self, y: int) -> Strip:
-        """Render a single line from the pyte screen buffer."""
+        """Render a single line from the pyte screen buffer.
+
+        Batches consecutive characters sharing the same style into a
+        single Segment for much fewer allocations per refresh.
+        Uses a dirty-line cache to skip unchanged rows.
+        """
         if y >= self._screen.lines:
             return Strip.blank(self.size.width)
 
-        segments = []
-        line = self._screen.buffer[y]
         cursor_y = self._screen.cursor.y
+
+        # Return cached strip if line is clean and not the cursor row
+        if y != cursor_y and y in self._line_cache:
+            return self._line_cache[y]
+
+        line = self._screen.buffer[y]
         cursor_x = self._screen.cursor.x
+        has_focus = self.has_focus
+        cols = self._screen.columns
+        segments: list[Segment] = []
 
         x = 0
-        while x < self._screen.columns:
+        while x < cols:
             char = line[x]
-            text = char.data if char.data else " "
+            is_cursor = has_focus and y == cursor_y and x == cursor_x
+            reverse = char.reverse ^ is_cursor
 
-            # Build Rich style
-            fg = _pyte_color_to_rich(char.fg) if char.fg != "default" else None
-            bg = _pyte_color_to_rich(char.bg) if char.bg != "default" else None
-
-            bold = char.bold
-            italic = char.italics
-            underline = char.underscore
-            strikethrough = char.strikethrough
-            reverse = char.reverse
-
-            # Cursor: show as reverse video when focused
-            if self.has_focus and y == cursor_y and x == cursor_x:
-                reverse = not reverse
-
-            style = Style(
-                color=fg or ("white" if not reverse else "black"),
-                bgcolor=bg or ("#000000" if not reverse else "white"),
-                bold=bold,
-                italic=italic,
-                underline=underline,
-                strike=strikethrough,
-                reverse=reverse,
+            style, style_key = _get_style(
+                char.fg, char.bg, char.bold, char.italics,
+                char.underscore, char.strikethrough, reverse,
             )
 
-            from rich.segment import Segment
+            # Start batching characters with the same style
+            chars: list[str] = [char.data or " "]
+            if not is_cursor:
+                nx = x + 1
+                while nx < cols:
+                    nc = line[nx]
+                    # Break at cursor position
+                    if has_focus and y == cursor_y and nx == cursor_x:
+                        break
+                    nc_key = (nc.fg, nc.bg, nc.bold, nc.italics,
+                              nc.underscore, nc.strikethrough, nc.reverse)
+                    if nc_key != style_key:
+                        break
+                    chars.append(nc.data or " ")
+                    nx += 1
+                x = nx
+            else:
+                x += 1
 
-            segments.append(Segment(text, style))
-            x += 1
+            segments.append(Segment("".join(chars), style))
 
         # Pad remaining width
         width = self.size.width
-        rendered_width = self._screen.columns
-        if rendered_width < width:
-            from rich.segment import Segment as Seg
+        if cols < width:
+            segments.append(Segment(" " * (width - cols)))
 
-            segments.append(Seg(" " * (width - rendered_width)))
+        strip = Strip(segments)
 
-        return Strip(segments)
+        # Cache non-cursor lines
+        if y != cursor_y:
+            self._line_cache[y] = strip
+
+        return strip
+
+    def on_focus(self) -> None:
+        """Invalidate cursor line cache on focus change."""
+        self._line_cache.pop(self._screen.cursor.y, None)
+        self.refresh()
+
+    def on_blur(self) -> None:
+        """Invalidate cursor line cache on focus change."""
+        self._line_cache.pop(self._screen.cursor.y, None)
+        self.refresh()
 
     # ------------------------------------------------------------------
     # Keyboard input
@@ -434,10 +512,14 @@ class PtyTerminalPane(Widget, can_focus=True):
 
     def on_key(self, event) -> None:
         """Forward keyboard input to the PTY."""
+        key = event.key
+
+        # Let escape bubble up to the Screen for navigation bindings
+        if key == "escape":
+            return
+
         event.stop()
         event.prevent_default()
-
-        key = event.key
 
         # Handle Ctrl combos
         if key == "ctrl+c":
@@ -445,7 +527,7 @@ class PtyTerminalPane(Widget, can_focus=True):
             self._input_buffer = ""
             return
         if key == "ctrl+d":
-            # Don't send EOF — bash has ignoreeof, but also don't forward
+            # Don't send EOF -- bash has ignoreeof, but also don't forward
             return
         if key == "ctrl+z":
             self._pty.write(b"\x1a")
@@ -519,38 +601,77 @@ class PtyTerminalPane(Widget, can_focus=True):
         then handle subsequent resizes."""
         rows, cols = self._effective_size()
         if not self._pty_spawned:
-            # First resize — create pyte screen and PTY with correct size
+            # First resize -- create pyte screen and PTY with correct size
             self._screen = pyte.Screen(cols, rows)
             self._stream = pyte.Stream(self._screen)
             self._spawn_pty()
             self._pty_spawned = True
+            # pyte marks all rows dirty on init; clear to avoid stale evictions
+            self._screen.dirty.clear()
         elif rows != self._screen.lines or cols != self._screen.columns:
             self._screen.resize(rows, cols)
             self._pty.resize(rows, cols)
+            self._line_cache.clear()
 
     # ------------------------------------------------------------------
-    # Public API
+    # Public API -- system messages
     # ------------------------------------------------------------------
 
     def write_system_message(self, text: str) -> None:
-        """Write a system message through the PTY (keeps pyte/bash in sync)."""
+        """Display a system message in the terminal output area.
+
+        Messages are injected directly into the pyte screen buffer
+        (not sent through bash), so they never appear on the prompt
+        line.  Multiple messages in the same event-loop tick are
+        batched into a single display update + prompt repaint.
+        """
         if not self._pty_ready:
             self._pending_messages.append(text)
-        else:
-            self._send_pty_message(text)
+            return
+        self._msg_buffer.append(text)
+        if not self._msg_flush_scheduled:
+            self._msg_flush_scheduled = True
+            self.call_after_refresh(self._flush_msg_buffer)
 
-    def _send_pty_message(self, text: str) -> None:
-        """Send a styled message through the PTY as a bash command."""
-        safe = text.replace("\\", "\\\\").replace("'", "'\\''")
+    def _flush_msg_buffer(self) -> None:
+        """Flush buffered system messages to the pyte display."""
+        self._msg_flush_scheduled = False
+        if not self._msg_buffer:
+            return
+
+        parts: list[str] = []
+        for i, msg in enumerate(self._msg_buffer):
+            if i == 0:
+                # First message: overwrite the current prompt line
+                parts.append(f"\r\033[K\033[1;36m  \u25b8 {msg}\033[0m")
+            else:
+                # Subsequent: new line
+                parts.append(f"\r\n\033[1;36m  \u25b8 {msg}\033[0m")
+
+        self._stream.feed("".join(parts))
+        self._msg_buffer = []
+        self._line_cache.clear()
+
+        # Force bash to print a fresh prompt below the messages
         self._skip_captures += 1
-        # Ctrl+U clears any partial input, then run the _msg helper
-        self._pty.write(f"\x15_msg '{safe}'\n".encode())
+        self._pty.write(b"\r")
+        self.refresh()
 
     def _flush_pending_messages(self) -> None:
-        """Send queued messages now that the PTY prompt is ready."""
+        """Display queued messages now that the PTY prompt is ready.
+
+        Called from _finish_capture when the bash startup sentinel
+        arrives.  The first PS1 prompt is about to be fed to pyte
+        right after this, so we do NOT need to force a prompt repaint.
+        """
+        if not self._pending_messages:
+            return
+        parts: list[str] = []
         for msg in self._pending_messages:
-            self._send_pty_message(msg)
+            parts.append(f"\033[1;36m  \u25b8 {msg}\033[0m\r\n")
+        self._stream.feed("".join(parts))
         self._pending_messages = []
+        self._line_cache.clear()
 
     def focus_input(self) -> None:
         """Focus this widget (compatibility API)."""
@@ -568,6 +689,10 @@ class PtyTerminalPane(Widget, can_focus=True):
         self._skip_captures = 1  # skip new bash startup sentinel
         self._pty_ready = False
         self._pending_messages = []
+        self._msg_buffer = []
+        self._msg_flush_scheduled = False
+        self._refresh_pending = False
+        self._line_cache.clear()
 
         # Reset pyte screen
         rows, cols = self._effective_size()

@@ -109,6 +109,8 @@ class LessonScreen(Screen):
         cwd_proxy = _CwdProxy(terminal)
         self._validator = OutputValidator(self._sandbox, executor=cwd_proxy)
 
+        # Seed ALL sandbox files up-front so students can freely modify them
+        self._seed_all_lesson_files()
         self._setup_current_exercise()
         # Always default cursor to terminal input
         self._focus_terminal()
@@ -123,7 +125,7 @@ class LessonScreen(Screen):
 
     def _focus_terminal(self) -> None:
         """Send focus to the terminal widget."""
-        self.set_timer(0.05, self._do_focus_terminal)
+        self.call_later(self._do_focus_terminal)
 
     def _do_focus_terminal(self) -> None:
         try:
@@ -132,7 +134,7 @@ class LessonScreen(Screen):
             pass
 
     def _setup_current_exercise(self) -> None:
-        """Set up the current exercise - sandbox files and indicator."""
+        """Set up the current exercise indicator and system message."""
         ex = self.current_exercise
         indicator = self.query_one("#exercise-indicator", Label)
 
@@ -148,17 +150,6 @@ class LessonScreen(Screen):
         ex.hints_used = 0
         ex.completed = False
 
-        # Reset executor cwd for sandbox_setup commands
-        self._executor.reset_cwd()
-
-        # Set up sandbox for exercise (background, not visible in PTY)
-        if ex.sandbox_setup:
-            for cmd in ex.sandbox_setup:
-                self._executor.run(cmd)
-
-        # Copy required assets
-        self._seed_lesson_assets()
-
         completed = self._current_exercise_idx
         total = len(self._lesson.exercises)
         indicator.update(
@@ -168,6 +159,20 @@ class LessonScreen(Screen):
         # Show exercise prompt in terminal
         terminal = self.query_one(PtyTerminalPane)
         terminal.write_system_message(f"--- Exercise {completed + 1}: {ex.title} ---")
+
+    def _seed_all_lesson_files(self) -> None:
+        """Run every exercise's sandbox_setup commands up-front.
+
+        This seeds ALL files for the entire lesson at once so they
+        persist across exercise transitions and students can freely
+        modify them.
+        """
+        self._executor.reset_cwd()
+        for ex in self._lesson.exercises:
+            if ex.sandbox_setup:
+                for cmd in ex.sandbox_setup:
+                    self._executor.run(cmd)
+        self._seed_lesson_assets()
 
     def _seed_lesson_assets(self) -> None:
         """Seed sandbox with assets needed for the current lesson."""
@@ -321,6 +326,8 @@ class LessonScreen(Screen):
         cwd_proxy = _CwdProxy(terminal)
         self._validator = OutputValidator(self._sandbox, executor=cwd_proxy)
 
+        # Re-seed all lesson files after sandbox reset
+        self._seed_all_lesson_files()
         self._setup_current_exercise()
         terminal.write_system_message("Sandbox reset.")
 

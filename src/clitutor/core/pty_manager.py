@@ -64,7 +64,7 @@ class PtyManager:
             if new_slave > 2:
                 os.close(new_slave)
 
-            os.execvp("bash", ["bash", "--rcfile", bashrc_path, "--noediting"])
+            os.execvp("bash", ["bash", "--rcfile", bashrc_path])
         else:
             # ---- parent process ----
             os.close(slave_fd)

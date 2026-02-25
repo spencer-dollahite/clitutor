@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import subprocess
-from typing import TYPE_CHECKING, Union
+from copy import deepcopy
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 from textual.app import App
 
 from clitutor.core.loader import LessonLoader
+from clitutor.models.lesson import LessonData
 from clitutor.models.progress import ProgressManager
 from clitutor.screens.home import HomeScreen
 
@@ -32,16 +34,35 @@ class CLItutorApp(App):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.animation_level = "none"
         self._loader = LessonLoader()
         self._progress = ProgressManager()
         self._lesson_metadata = self._loader.load_metadata()
+
+        # Pre-load all lesson content into memory for instant lesson opens
+        self._lesson_cache: Dict[str, LessonData] = {}
+        for meta in self._lesson_metadata:
+            try:
+                self._lesson_cache[meta.id] = self._loader.load_lesson(meta)
+            except FileNotFoundError:
+                pass
+
         # Sandbox is created lazily on first lesson open
         self._sandbox: Union[DockerSandbox, SandboxManager, None] = None
+        # Docker availability pre-checked in background
+        self._docker_checked = False
+        self._docker_is_available = False
 
     def _ensure_sandbox(self) -> Union[DockerSandbox, SandboxManager]:
         """Create sandbox on first use (defers docker check from startup)."""
         if self._sandbox is None:
-            if self._docker_available():
+            # Use pre-checked result if available, otherwise check now
+            is_docker = (
+                self._docker_is_available
+                if self._docker_checked
+                else self._docker_available()
+            )
+            if is_docker:
                 from clitutor.core.docker_sandbox import DockerSandbox
                 self._sandbox = DockerSandbox()
             else:
@@ -62,9 +83,16 @@ class CLItutorApp(App):
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return False
 
+    def _check_docker_bg(self) -> None:
+        """Check Docker availability (runs in background worker thread)."""
+        self._docker_is_available = self._docker_available()
+        self._docker_checked = True
+
     def on_mount(self) -> None:
         """Show the home screen on startup."""
         self._show_home()
+        # Pre-check Docker in background so first lesson open is instant
+        self.run_worker(self._check_docker_bg, thread=True, exclusive=True)
 
     def _show_home(self) -> None:
         """Push or switch to the home screen."""
@@ -81,7 +109,12 @@ class CLItutorApp(App):
         """Open a lesson screen."""
         from clitutor.screens.lesson import LessonScreen
 
-        lesson = self._loader.load_lesson(meta)
+        # Use pre-loaded lesson (deepcopy for fresh exercise runtime state)
+        cached = self._lesson_cache.get(meta.id)
+        if cached is not None:
+            lesson = deepcopy(cached)
+        else:
+            lesson = self._loader.load_lesson(meta)
 
         # Create fresh sandbox (first call also runs docker check)
         sandbox = self._ensure_sandbox()
