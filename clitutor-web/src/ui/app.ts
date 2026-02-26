@@ -337,6 +337,7 @@ export class App {
 
   private autoScrollToExercise(): void {
     if (!this.autoFollow) return;
+    if (this.currentExercise === 0) return; // let user read intro material
     if (!this.sidebarOpen || this.sidebarMode !== "content") return;
     if (!this.currentLesson) return;
     if (this.currentExercise >= this.currentLesson.exercises.length) return;
