@@ -26,6 +26,9 @@ export class OutputValidator {
   async validate(exercise: Exercise, result: CommandResult): Promise<ValidationResult> {
     const vtype = exercise.validation_type;
     const expected = exercise.expected;
+    console.log("[Validator] validate: exercise=%s type=%s expected=%s stdout=%s cwd=%s rc=%d",
+      exercise.id, vtype, JSON.stringify(expected), JSON.stringify(result.stdout.slice(0, 80)),
+      result.cwd, result.returncode);
 
     switch (vtype) {
       case "output_equals":

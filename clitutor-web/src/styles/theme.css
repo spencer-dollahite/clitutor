@@ -169,6 +169,9 @@ html, body {
 
 /* Sidebar lesson content */
 .sidebar-lesson-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0 16px 12px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 12px;
@@ -187,6 +190,33 @@ html, body {
 
 .sidebar-back:hover {
   color: var(--text);
+  border-color: var(--accent-dim);
+}
+
+.auto-follow-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.auto-follow-btn:hover {
+  color: var(--text-muted);
+  border-color: var(--text-muted);
+}
+
+.auto-follow-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.auto-follow-btn.active:hover {
+  color: var(--accent-dim);
   border-color: var(--accent-dim);
 }
 

@@ -12,8 +12,7 @@ import { ProgressManager } from "../core/progress";
 import { LinuxVM } from "../vm/linux-vm";
 import { SentinelCapture } from "../vm/sentinel-capture";
 import { OutputValidator } from "../core/validator";
-import { calculateXp } from "../core/xp";
-import { getLevelInfo, levelProgress, xpInLevel, xpForLevel } from "../core/xp";
+import { calculateXp, getLevelInfo, levelProgress } from "../core/xp";
 import { TerminalPane } from "./components/terminal-pane";
 import { MarkdownPane } from "./components/markdown-pane";
 import { HintOverlay } from "./components/hint-overlay";
@@ -38,6 +37,9 @@ export class App {
   private currentExercise = 0;
   private sidebarOpen = false;
   private sidebarMode: "lessons" | "content" = "lessons";
+  private validating = false;
+  private autoFollow = true;
+  private static readonly AUTO_FOLLOW_KEY = "clitutor-auto-follow";
 
   // DOM refs
   private termContainer: HTMLElement | null = null;
@@ -57,24 +59,16 @@ export class App {
   }
 
   async start(): Promise<void> {
-    console.log("[App] start() called");
-
     // Init progress DB and load lesson metadata — no VM boot yet
-    console.log("[App] Initializing progress DB...");
     await this.progress.init();
-    console.log("[App] Progress DB initialized");
-
-    console.log("[App] Loading lesson metadata...");
+    this.autoFollow = localStorage.getItem(App.AUTO_FOLLOW_KEY) !== "false";
     this.lessonsMeta = await this.loader.loadMetadata();
-    console.log("[App] Loaded %d lessons", this.lessonsMeta.length, this.lessonsMeta);
 
     // Show the lesson picker as the landing screen
-    console.log("[App] Showing lesson picker");
     this.showPicker();
 
     // Listen for XP updates
     document.addEventListener("xp-updated", () => {
-      console.log("[App] xp-updated event received");
       this.updateStatusBar();
       this.picker?.refresh();
     });
@@ -83,7 +77,6 @@ export class App {
   // ── Picker (landing screen) ──────────────────────────────────────
 
   private showPicker(): void {
-    console.log("[App] showPicker(): clearing root, creating LessonPicker");
     this.root.innerHTML = "";
     this.picker = new LessonPicker(
       this.lessonsMeta,
@@ -91,38 +84,31 @@ export class App {
       (meta) => this.enterLesson(meta),
     );
     this.picker.render(this.root);
-    console.log("[App] showPicker(): picker rendered");
   }
 
   private async enterLesson(meta: LessonMeta): Promise<void> {
-    console.log("[App] enterLesson() called for:", meta.id, meta.title);
-
     // Destroy picker
-    console.log("[App] Destroying picker");
     this.picker?.destroy();
     this.picker = null;
 
+    // Reset sentinel state so stale ready/skipCaptures/capturing
+    // from a previous lesson don't carry over
+    this.sentinel.reset();
+
     // Render terminal layout
-    console.log("[App] Rendering terminal layout");
     this.renderLayout();
-    console.log("[App] Terminal layout rendered, terminalPane:", !!this.terminalPane);
 
     // Show boot overlay and boot VM
-    console.log("[App] Showing boot overlay");
     this.showBootOverlay();
 
-    console.log("[App] Starting VM boot...");
-    const bootStart = performance.now();
     try {
       await this.bootVM();
-      console.log("[App] VM boot complete in %dms", Math.round(performance.now() - bootStart));
     } catch (err) {
-      console.error("[App] VM boot FAILED:", err);
+      console.error("[App] VM boot failed:", err);
       throw err;
     }
 
     // Pre-load lesson and seed files while overlay is still showing
-    console.log("[App] Pre-loading and seeding lesson:", meta.id);
     const lesson = await this.loader.loadLesson(meta);
     await this.seedLessonSetup(lesson);
 
@@ -130,28 +116,24 @@ export class App {
     this.terminalPane?.term.clear();
 
     // VM is ready — hide boot overlay, focus terminal
-    console.log("[App] Hiding boot overlay, focusing terminal");
     this.hideBootOverlay();
     this.terminalPane?.focus();
 
-    // Set up lesson UI (pass pre-loaded lesson to skip re-seeding)
-    console.log("[App] Opening lesson by meta:", meta.id);
+    // Set up lesson UI (pass pre-loaded lesson to skip re-seeding).
+    // openLessonByMeta sends a prompt-kick (\n) so we don't need another here.
     await this.openLessonByMeta(meta, lesson);
-
-    // Trigger a fresh bash prompt below the messages
-    this.sentinel.skipNextCapture();
-    this.vm?.sendSerial('\n');
-    console.log("[App] enterLesson() complete");
   }
 
   private backToPicker(): void {
-    console.log("[App] backToPicker(): destroying VM and layout");
     // Destroy VM
     if (this.vm) {
       this.vm.destroy();
       this.vm = null;
       this.validator = null;
     }
+
+    // Reset sentinel so stale state doesn't carry into next lesson
+    this.sentinel.reset();
 
     // Destroy terminal layout
     this.terminalPane = null;
@@ -167,7 +149,6 @@ export class App {
     this.sidebarOpen = false;
 
     // Show picker with updated progress
-    console.log("[App] backToPicker(): showing picker");
     this.showPicker();
   }
 
@@ -317,22 +298,16 @@ export class App {
   // ── VM Boot ───────────────────────────────────────────────────────
 
   private async bootVM(): Promise<void> {
-    console.log("[App.bootVM] Creating LinuxVM instance");
     this.vm = new LinuxVM();
     this.validator = new OutputValidator(this.vm);
 
     // Wire sentinel capture
-    console.log("[App.bootVM] Wiring sentinel capture callbacks");
     this.sentinel.onDisplay = (text) => this.terminalPane?.write(text);
     this.sentinel.onCommand = (result) => this.handleCommand(result);
-    this.sentinel.onReady = () => {
-      console.log("[App.bootVM] sentinel.onReady fired");
-    };
 
     // Boot VM with serial output flowing to sentinel parser
     let buffer = "";
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
-    let byteCount = 0;
 
     const flushBuffer = () => {
       if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
@@ -342,12 +317,7 @@ export class App {
       }
     };
 
-    console.log("[App.bootVM] Calling vm.boot()...");
     await this.vm.boot((byte: number) => {
-      byteCount++;
-      if (byteCount <= 5 || byteCount % 1000 === 0) {
-        console.log("[App.bootVM] serial byte #%d: %s", byteCount, JSON.stringify(String.fromCharCode(byte)));
-      }
       buffer += String.fromCharCode(byte);
       // Flush immediately on newlines or large buffers; otherwise
       // schedule a short-delay flush so echo chars appear promptly.
@@ -357,31 +327,102 @@ export class App {
         flushTimer = setTimeout(flushBuffer, 4);
       }
     });
-    console.log("[App.bootVM] vm.boot() resolved, total serial bytes so far: %d", byteCount);
 
     // Attach terminal to VM for keyboard input
-    console.log("[App.bootVM] Attaching terminal pane to VM");
     this.terminalPane?.attach(this.vm);
 
     this.updateBootMessage("Waiting for shell...");
-    console.log("[App.bootVM] Calling vm.waitForShell()...");
-
     await this.vm.waitForShell();
-    console.log("[App.bootVM] waitForShell() resolved — shell is ready");
+  }
+
+  private autoScrollToExercise(): void {
+    if (!this.autoFollow) return;
+    if (!this.sidebarOpen || this.sidebarMode !== "content") return;
+    if (!this.currentLesson) return;
+    if (this.currentExercise >= this.currentLesson.exercises.length) return;
+    this.markdownPane?.scrollToExercise(this.currentExercise + 1);
   }
 
   // ── Command handling ──────────────────────────────────────────────
 
   private async handleCommand(result: CommandResult): Promise<void> {
-    if (!this.currentLesson) return;
-    if (this.currentExercise >= this.currentLesson.exercises.length) return;
+    console.log("[handleCommand] ENTER: validating=%s currentLesson=%s currentExercise=%d stdout=%s rc=%d cwd=%s",
+      this.validating, this.currentLesson?.id ?? "null", this.currentExercise,
+      JSON.stringify(result.stdout.slice(0, 120)), result.returncode, result.cwd);
 
+    if (this.validating) {
+      console.log("[handleCommand] SKIP: validating=true");
+      return;
+    }
+    if (!this.currentLesson) {
+      console.log("[handleCommand] SKIP: no currentLesson");
+      return;
+    }
+    if (this.currentExercise >= this.currentLesson.exercises.length) {
+      console.log("[handleCommand] SKIP: currentExercise=%d >= exercises.length=%d",
+        this.currentExercise, this.currentLesson.exercises.length);
+      return;
+    }
     const exercise = this.currentLesson.exercises[this.currentExercise];
+    console.log("[handleCommand] exercise: id=%s title=%s validation_type=%s completed=%s attempts=%d",
+      exercise.id, exercise.title, exercise.validation_type, exercise.completed, exercise.attempts);
+    if (exercise.completed) {
+      console.log("[handleCommand] SKIP: exercise already completed");
+      return;
+    }
+
+    // Skip empty Enter presses for non-filesystem validations (no command was run).
+    // Filesystem-based validations (file_exists, dir_with_file, etc.) still run
+    // because commands like `mkdir` produce no output but change state.
+    if (!result.stdout.trim() && result.returncode === 0) {
+      const vt = exercise.validation_type;
+      if (vt === "output_equals" || vt === "output_contains" || vt === "output_regex" || vt === "exit_code") {
+        console.log("[handleCommand] SKIP: empty stdout + rc=0 for validation_type=%s", vt);
+        return;
+      }
+    }
+
+    console.log("[handleCommand] PROCEEDING with validation for exercise %s (type=%s)",
+      exercise.id, exercise.validation_type);
     exercise.attempts++;
 
-    const validation = await this.validator!.validate(exercise, result);
+    // Mute display during validation — internal serial commands (find, rm)
+    // should be invisible. Also set validating flag to prevent the sentinel
+    // captures from those commands from recursively triggering validation.
+    this.validating = true;
+    const origDisplay = this.sentinel.onDisplay;
+    this.sentinel.onDisplay = () => {};
+
+    // Pre-skip sentinel pairs from internal validation commands.
+    // execCommand sends 2 serial commands (cmd > tmp, rm tmp), each producing
+    // a CMD_END+CMD_START sentinel pair. Skipping them here — instead of
+    // relying solely on the 600ms timer + validating guard — ensures
+    // late-arriving sentinels don't consume the prompt-kick skip and trigger
+    // phantom duplicate validation.
+    const vt = exercise.validation_type;
+    if (vt === "dir_with_file" || vt === "any_file_contains") {
+      this.sentinel.skipNextCapture();
+      this.sentinel.skipNextCapture();
+    }
+
+    let validation: { passed: boolean; message: string };
+    try {
+      console.log("[handleCommand] calling validator.validate for exercise %s", exercise.id);
+      validation = await this.validator!.validate(exercise, result);
+      console.log("[handleCommand] validation result: passed=%s message=%s", validation.passed, validation.message);
+
+      // Wait for trailing serial data from validation commands to be
+      // processed while display is still muted
+      await new Promise((r) => setTimeout(r, 600));
+    } finally {
+      console.log("[handleCommand] restoring onDisplay, clearing validating flag");
+      this.sentinel.onDisplay = origDisplay;
+      this.validating = false;
+    }
 
     if (validation.passed) {
+      console.log("[handleCommand] PASSED! Marking exercise %s as completed, advancing from %d",
+        exercise.id, this.currentExercise);
       exercise.completed = true;
       const xp = calculateXp(
         exercise.xp,
@@ -402,6 +443,8 @@ export class App {
       this.sentinel.queueSystemMessage(`\u2713 ${exercise.title} — +${xp} XP`);
 
       this.currentExercise++;
+      console.log("[handleCommand] currentExercise now=%d (total=%d)",
+        this.currentExercise, this.currentLesson.exercises.length);
       this.updateExerciseBar();
       this.updateStatusBar();
       document.dispatchEvent(new CustomEvent("xp-updated"));
@@ -409,7 +452,7 @@ export class App {
       if (this.currentExercise < this.currentLesson.exercises.length) {
         const next = this.currentLesson.exercises[this.currentExercise];
         this.sentinel.queueSystemMessage(`Next: ${next.title}`);
-        this.markdownPane?.scrollToExercise(this.currentExercise + 1);
+        this.autoScrollToExercise();
       } else {
         this.sentinel.queueSystemMessage(
           `\u2605 Lesson complete: ${this.currentLesson.title}! Type /lessons for more.`,
@@ -417,9 +460,15 @@ export class App {
         showToast(`Lesson complete: ${this.currentLesson.title}!`, "success");
       }
     } else {
+      console.log("[handleCommand] FAILED: exercise=%s message=%s", exercise.id, validation.message);
       exercise.first_try = false;
       this.sentinel.queueSystemMessage(validation.message);
     }
+
+    // System messages use \r\x1b[K which overwrites the current prompt line.
+    // Kick a fresh prompt so the user sees a usable prompt below the messages.
+    this.sentinel.skipNextCapture();
+    this.vm?.sendSerial('\n');
   }
 
   // ── Slash commands ────────────────────────────────────────────────
@@ -557,7 +606,9 @@ export class App {
     const lesson = preloaded ?? await this.loader.loadLesson(meta);
     this.currentLesson = lesson;
 
-    // Restore progress
+    // Restore progress — currentExercise advances past completed exercises.
+    // When all are done, currentExercise = length which the exercise bar
+    // and handleCommand both handle correctly (showing "All exercises complete!").
     this.currentExercise = 0;
     for (let i = 0; i < lesson.exercises.length; i++) {
       const ex = lesson.exercises[i];
@@ -565,9 +616,6 @@ export class App {
         ex.completed = true;
         this.currentExercise = i + 1;
       }
-    }
-    if (this.currentExercise >= lesson.exercises.length) {
-      this.currentExercise = Math.max(0, lesson.exercises.length - 1);
     }
 
     // Seed lesson files silently when switching lessons (not pre-seeded)
@@ -580,6 +628,7 @@ export class App {
     this.sidebarMode = "content";
     this.showLessonContent();
     this.toggleSidebar(true);
+    setTimeout(() => this.autoScrollToExercise(), 350);
 
     // Show exercise bar
     this.updateExerciseBar();
@@ -597,6 +646,7 @@ export class App {
     }
 
     // Trigger fresh prompt after messages
+    console.log("[openLessonByMeta] skipNextCapture + sending \\n for fresh prompt");
     this.sentinel.skipNextCapture();
     this.vm?.sendSerial('\n');
 
@@ -607,9 +657,12 @@ export class App {
     if (!this.sidebarContent || !this.currentLesson) return;
 
     // Clear and render markdown
+    const followClass = this.autoFollow ? "auto-follow-btn active" : "auto-follow-btn";
     this.sidebarContent.innerHTML = `
       <div class="sidebar-lesson-header">
         <button class="btn sidebar-back" id="sidebar-back">\u2190 All Lessons</button>
+        <button class="btn ${followClass}" id="auto-follow-toggle"
+                title="Auto-scroll to active exercise">\u21F5 Follow</button>
       </div>
       <div class="sidebar-markdown"></div>
     `;
@@ -617,6 +670,14 @@ export class App {
     this.sidebarContent.querySelector("#sidebar-back")!.addEventListener("click", () =>
       this.showLessonList(),
     );
+
+    const followBtn = this.sidebarContent.querySelector("#auto-follow-toggle")!;
+    followBtn.addEventListener("click", () => {
+      this.autoFollow = !this.autoFollow;
+      localStorage.setItem(App.AUTO_FOLLOW_KEY, String(this.autoFollow));
+      followBtn.classList.toggle("active", this.autoFollow);
+      if (this.autoFollow) this.autoScrollToExercise();
+    });
 
     const mdContainer = this.sidebarContent.querySelector(".sidebar-markdown")!;
     this.markdownPane = new MarkdownPane(mdContainer as HTMLElement);
@@ -645,9 +706,8 @@ export class App {
     }
     if (commands.length === 0) return;
 
-    console.log("[App] seedLessonSetup: %d commands, clean=%s", commands.length, clean);
-
     // Mute terminal display during seeding
+    console.log("[seedLessonSetup] muting display, skipNextCapture for seed script (%d commands)", commands.length);
     const origDisplay = this.sentinel.onDisplay;
     this.sentinel.onDisplay = () => {};
 
@@ -686,6 +746,7 @@ export class App {
     );
     this.currentExercise++;
     this.updateExerciseBar();
+    this.autoScrollToExercise();
 
     if (this.currentExercise < this.currentLesson.exercises.length) {
       const next = this.currentLesson.exercises[this.currentExercise];

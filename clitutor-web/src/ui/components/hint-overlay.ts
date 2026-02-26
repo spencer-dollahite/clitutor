@@ -12,6 +12,7 @@ const HINT_PENALTY_TEXT: Record<number, string> = {
 export class HintOverlay {
   private overlay: HTMLElement;
   private visible = false;
+  private escHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor() {
     this.overlay = document.createElement("div");
@@ -66,19 +67,24 @@ export class HintOverlay {
 
     this.overlay.querySelector("#hint-close")?.addEventListener("click", () => this.hide());
 
-    // Close on Escape
-    const escHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        this.hide();
-        document.removeEventListener("keydown", escHandler);
-      }
+    // Close on Escape — remove any stale handler first
+    if (this.escHandler) {
+      document.removeEventListener("keydown", this.escHandler);
+    }
+    this.escHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") this.hide();
     };
-    document.addEventListener("keydown", escHandler);
+    document.addEventListener("keydown", this.escHandler);
   }
 
   hide(): void {
     this.overlay.style.display = "none";
     this.visible = false;
+
+    if (this.escHandler) {
+      document.removeEventListener("keydown", this.escHandler);
+      this.escHandler = null;
+    }
   }
 
   get isVisible(): boolean {

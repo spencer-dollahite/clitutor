@@ -1,26 +1,33 @@
 # CLItutor
 
-An interactive CLI tutorial with a gamified TUI built on
-[Textual](https://github.com/Textualize/textual). Designed for graduate
-education at the Naval Postgraduate School, CLItutor teaches Linux command-line
-skills through hands-on exercises in a sandboxed environment.
+An interactive CLI tutorial designed for graduate education at the Naval
+Postgraduate School. CLItutor teaches Linux command-line skills through hands-on
+exercises in a sandboxed environment. Students work through lessons in an
+integrated terminal, earn XP for completing exercises, and track their progress.
 
-Students work through lessons in an integrated terminal, earn XP for completing
-exercises, and track their progress — all without leaving the TUI.
+## Try It Now
+
+**No install required** — run CLItutor directly in your browser:
+
+### [ssdollahite.com/clitutor](https://ssdollahite.com/clitutor)
+
+The web version runs a full Linux environment in-browser, so you can start
+learning immediately from any device.
+
+---
 
 ## Features
 
 - **15 lessons** covering basics through advanced topics (scripting, networking,
   SSH, Git, Docker, and more)
-- **Interactive terminal** with a real PTY embedded in the TUI
+- **Interactive terminal** with a real sandboxed Linux environment
 - **Automatic validation** of exercise output, exit codes, and file state
 - **XP and progress tracking** across sessions
-- **Sandboxed execution** — exercises run in a local tmpdir or Docker container
 - **Tab completion** and hint overlays for a guided experience
 
-## Quick Start
+## Local Installation
 
-Clone and run — one command does it all:
+If you prefer to run CLItutor locally, clone and run — one command does it all:
 
 ```bash
 git clone https://github.com/spencer-dollahite/clitutor.git && cd clitutor && ./bootstrap.sh

@@ -64,22 +64,15 @@ export class LinuxVM {
 
   /**
    * Boot the VM. Returns once the emulator is started (not once the shell
-   * is ready — use onReady callback for that).
+   * is ready — use waitForShell() for that).
    */
   async boot(onSerial: (byte: number) => void): Promise<void> {
-    console.log("[LinuxVM] boot() called");
     this.onSerialByte = onSerial;
 
-    console.log("[LinuxVM] Checking for state snapshot at:", this.opts.statePath);
     const hasState = await this.urlExists(this.opts.statePath);
-    console.log("[LinuxVM] hasState:", hasState);
-
-    console.log("[LinuxVM] Checking for fs manifest at:", this.opts.fsManifest);
     const hasFs = await this.urlExists(this.opts.fsManifest);
-    console.log("[LinuxVM] hasFs:", hasFs);
 
     if (!hasFs) {
-      console.error("[LinuxVM] FATAL: Alpine rootfs not found at", this.opts.fsManifest);
       throw new Error(
         "Alpine rootfs not found. Run 'npm run build-rootfs' first. " +
         `Expected: ${this.opts.fsManifest}`,
@@ -89,7 +82,6 @@ export class LinuxVM {
     // Hidden VGA container required by v86 internals even for serial-only
     let screenContainer = document.getElementById("v86-screen");
     if (!screenContainer) {
-      console.log("[LinuxVM] Creating hidden v86-screen container");
       screenContainer = document.createElement("div");
       screenContainer.id = "v86-screen";
       screenContainer.style.display = "none";
@@ -97,8 +89,6 @@ export class LinuxVM {
         '<div style="white-space:pre;font:14px monospace;line-height:14px"></div>' +
         '<canvas style="display:none"></canvas>';
       document.body.appendChild(screenContainer);
-    } else {
-      console.log("[LinuxVM] Reusing existing v86-screen container");
     }
 
     const v86Options: V86Options = {
@@ -120,10 +110,8 @@ export class LinuxVM {
     };
 
     if (hasState) {
-      console.log("[LinuxVM] Using state snapshot for instant boot");
       v86Options.initial_state = { url: this.opts.statePath };
     } else {
-      console.log("[LinuxVM] Cold boot: bzimage_initrd_from_filesystem");
       v86Options.bzimage_initrd_from_filesystem = true;
       v86Options.cmdline = KERNEL_CMDLINE;
     }
@@ -132,36 +120,13 @@ export class LinuxVM {
       v86Options.network_relay_url = this.opts.networkRelay;
     }
 
-    console.log("[LinuxVM] Creating V86 instance with options:", {
-      wasm_path: v86Options.wasm_path,
-      memory_size: v86Options.memory_size,
-      hasInitialState: !!v86Options.initial_state,
-      hasBzimage: !!v86Options.bzimage_initrd_from_filesystem,
-      fsBaseUrl: this.opts.fsBaseUrl,
-    });
-
-    try {
-      this.emulator = new V86(v86Options);
-      console.log("[LinuxVM] V86 instance created successfully");
-    } catch (err) {
-      console.error("[LinuxVM] FAILED to create V86 instance:", err);
-      throw err;
-    }
+    this.emulator = new V86(v86Options);
 
     // Expose on window for state snapshot generation
     (window as any).__vm = this.emulator;
 
     // Wire serial output
-    let serialByteCount = 0;
     this.emulator.add_listener("serial0-output-byte", (byte: number) => {
-      serialByteCount++;
-      if (serialByteCount === 1) {
-        console.log("[LinuxVM] *** FIRST serial byte received! ***");
-      }
-      if (serialByteCount <= 10 || serialByteCount % 5000 === 0) {
-        console.log("[LinuxVM] serial byte #%d: charCode=%d char=%s",
-          serialByteCount, byte, JSON.stringify(String.fromCharCode(byte)));
-      }
       this.onSerialByte?.(byte);
 
       // Track serial text to detect shell prompt for auto-setup
@@ -172,39 +137,15 @@ export class LinuxVM {
       this.checkReady();
     });
 
-    // Also listen for emulator events to debug lifecycle
-    this.emulator.add_listener("emulator-ready", () => {
-      console.log("[LinuxVM] EVENT: emulator-ready");
-    });
-    this.emulator.add_listener("emulator-started", () => {
-      console.log("[LinuxVM] EVENT: emulator-started");
-    });
-    this.emulator.add_listener("emulator-stopped", () => {
-      console.log("[LinuxVM] EVENT: emulator-stopped");
-    });
-    this.emulator.add_listener("emulator-loading", (e: any) => {
-      console.log("[LinuxVM] EVENT: emulator-loading", e);
-    });
-
     // When restoring from snapshot, the shell is idle — send Enter to
-    // trigger a prompt reprint so checkReady() can detect it
+    // trigger a prompt reprint so checkReady() can detect it.
     if (hasState) {
-      setTimeout(() => {
-        console.log("[LinuxVM] Sending newline to wake shell after snapshot restore");
-        this.emulator?.serial0_send("\n");
-      }, 1000);
+      this.emulator.add_listener("emulator-started", () => {
+        setTimeout(() => {
+          this.emulator?.serial0_send("\n");
+        }, 500);
+      });
     }
-
-    // Diagnostic: check if emulator is running after a short delay
-    setTimeout(() => {
-      if (this.emulator) {
-        const running = this.emulator.is_running?.();
-        console.log("[LinuxVM] Diagnostic after 2s — is_running: %s, serial bytes received: %d",
-          running, serialByteCount);
-      }
-    }, 2000);
-
-    console.log("[LinuxVM] boot() complete — emulator created, listeners attached");
   }
 
   /**
@@ -212,35 +153,14 @@ export class LinuxVM {
    * Call this after boot() to set up the sentinel machinery.
    */
   waitForShell(): Promise<void> {
-    console.log("[LinuxVM] waitForShell() called, bashrcInstalled:", this.bashrcInstalled);
-    console.log("[LinuxVM] serialText so far (%d chars): %s",
-      this.serialText.length, JSON.stringify(this.serialText.slice(-200)));
     return new Promise((resolve) => {
       if (this.bashrcInstalled) {
-        console.log("[LinuxVM] waitForShell() — bashrc already installed, resolving immediately");
         resolve();
         return;
       }
       this.bootResolve = resolve;
       // Check immediately in case we already have a prompt
       this.checkReady();
-
-      // Diagnostic: log serial progress every 3 seconds
-      const diagInterval = setInterval(() => {
-        if (this.bashrcInstalled) {
-          clearInterval(diagInterval);
-          return;
-        }
-        console.log("[LinuxVM] waitForShell STILL WAITING — serialText length: %d, tail: %s",
-          this.serialText.length, JSON.stringify(this.serialText.slice(-150)));
-      }, 3000);
-
-      // Clear the diagnostic interval once resolved
-      const origResolve = resolve;
-      this.bootResolve = () => {
-        clearInterval(diagInterval);
-        origResolve();
-      };
     });
   }
 
@@ -255,8 +175,6 @@ export class LinuxVM {
       this.serialText.includes(":~$ ") ||
       /\n(localhost|clitutor)[^ ]*[#$] $/.test(this.serialText)
     ) {
-      console.log("[LinuxVM] checkReady(): shell prompt detected!");
-      console.log("[LinuxVM] serialText tail:", JSON.stringify(this.serialText.slice(-100)));
       this.installBashrcNow();
     }
   }
@@ -264,7 +182,6 @@ export class LinuxVM {
   private async installBashrcNow(): Promise<void> {
     if (this.bashrcInstalled) return;
     this.bashrcInstalled = true;
-    console.log("[LinuxVM] installBashrcNow(): starting bashrc installation");
 
     // Small delay for prompt to settle
     await new Promise((r) => setTimeout(r, 500));
@@ -274,23 +191,17 @@ export class LinuxVM {
     // serial since v86's create_file API can't write to paths outside the
     // base image's directory tree.
     const bashrc = generateBashrc("/home/student", "student", "clitutor");
-    console.log("[LinuxVM] Writing bashrc to /root/.clitutor_bashrc (%d bytes)", bashrc.length);
     await this.writeFile("/root/.clitutor_bashrc", bashrc);
-    console.log("[LinuxVM] Sending bashrc source command");
     this.sendSerial("mkdir -p /home/student; . /root/.clitutor_bashrc 2>/dev/null\n");
 
-    // Mark VM as ready
+    // Mark VM as ready (used by generate-state.mjs)
     (window as any).__vmReady = true;
 
-    // Resolve the waitForShell promise
+    // Resolve the waitForShell promise after bashrc takes effect
     if (this.bootResolve) {
-      console.log("[LinuxVM] Resolving waitForShell promise in 800ms");
-      // Give bashrc a moment to take effect
-      setTimeout(() => {
-        console.log("[LinuxVM] waitForShell resolved — VM fully ready");
-        this.bootResolve?.();
-        this.bootResolve = null;
-      }, 800);
+      const resolve = this.bootResolve;
+      this.bootResolve = null;
+      setTimeout(() => resolve(), 800);
     }
   }
 
@@ -366,13 +277,6 @@ export class LinuxVM {
     return result.trim().length > 0;
   }
 
-  async seedFiles(commands: string[]): Promise<void> {
-    for (const cmd of commands) {
-      this.sendSerial(cmd + "\n");
-    }
-    await new Promise((r) => setTimeout(r, 300));
-  }
-
   // ── State management ──────────────────────────────────────────────
 
   async saveState(): Promise<ArrayBuffer> {
@@ -381,7 +285,6 @@ export class LinuxVM {
   }
 
   destroy(): void {
-    console.log("[LinuxVM] destroy() called, emulator exists:", !!this.emulator);
     if (this.emulator) {
       this.emulator.destroy();
       this.emulator = null;
@@ -391,12 +294,7 @@ export class LinuxVM {
 
       // Remove the v86-screen container so a fresh VM gets a clean one
       const screen = document.getElementById("v86-screen");
-      if (screen) {
-        screen.remove();
-        console.log("[LinuxVM] Removed stale #v86-screen element");
-      }
-
-      console.log("[LinuxVM] Emulator destroyed and state reset");
+      if (screen) screen.remove();
     }
   }
 
