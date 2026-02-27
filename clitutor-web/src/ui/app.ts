@@ -38,6 +38,9 @@ export class App {
   private sidebarOpen = false;
   private sidebarMode: "lessons" | "content" = "lessons";
   private validating = false;
+  private seeding = false;
+  private serialSuppressed = false;
+  private clearSerialBuffer: (() => void) | null = null;
   private autoFollow = true;
   private static readonly AUTO_FOLLOW_KEY = "clitutor-auto-follow";
 
@@ -108,12 +111,18 @@ export class App {
       throw err;
     }
 
-    // Pre-load lesson and seed files while overlay is still showing
+    // Pre-load lesson and seed files while overlay is still showing.
+    // seedLessonSetup enables byte-level serial suppression.
     const lesson = await this.loader.loadLesson(meta);
     await this.seedLessonSetup(lesson);
 
-    // Clear xterm.js display directly (synchronous, no serial race)
+    // Lift serial suppression — this entire block is synchronous (no event
+    // loop yields), so no stale bytes can sneak in between steps.
+    this.clearSerialBuffer?.();
     this.terminalPane?.term.clear();
+    this.serialSuppressed = false;
+    this.seeding = false;
+    this.restoreDisplay();
 
     // VM is ready — hide boot overlay, focus terminal
     this.hideBootOverlay();
@@ -132,8 +141,11 @@ export class App {
       this.validator = null;
     }
 
-    // Reset sentinel so stale state doesn't carry into next lesson
+    // Reset all state so nothing carries into next lesson
     this.sentinel.reset();
+    this.seeding = false;
+    this.serialSuppressed = false;
+    this.clearSerialBuffer = null;
 
     // Destroy terminal layout
     this.terminalPane = null;
@@ -317,7 +329,18 @@ export class App {
       }
     };
 
+    // Expose buffer control so callers can kill pending flush timers
+    // and discard buffered bytes when lifting serial suppression.
+    this.clearSerialBuffer = () => {
+      buffer = "";
+      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+    };
+
     await this.vm.boot((byte: number) => {
+      // Byte-level serial suppression: discard bytes at the source.
+      // No bytes enter buffer → no flush timers → no processOutput calls.
+      if (this.serialSuppressed) return;
+
       buffer += String.fromCharCode(byte);
       // Flush immediately on newlines or large buffers; otherwise
       // schedule a short-delay flush so echo chars appear promptly.
@@ -333,6 +356,19 @@ export class App {
 
     this.updateBootMessage("Waiting for shell...");
     await this.vm.waitForShell();
+
+    // Ensure the boot sentinel has been processed so the sentinel state
+    // machine is in a known-good state (ready=true, skipCaptures=0)
+    // before any seeding begins.  No hardcoded timer — event-driven.
+    if (!this.sentinel.isReady) {
+      await new Promise<void>((resolve) => {
+        const prev = this.sentinel.onReady;
+        this.sentinel.onReady = () => {
+          this.sentinel.onReady = prev;
+          resolve();
+        };
+      });
+    }
   }
 
   private autoScrollToExercise(): void {
@@ -353,6 +389,10 @@ export class App {
 
     if (this.validating) {
       console.log("[handleCommand] SKIP: validating=true");
+      return;
+    }
+    if (this.seeding) {
+      console.log("[handleCommand] SKIP: seeding=true");
       return;
     }
     if (!this.currentLesson) {
@@ -387,39 +427,26 @@ export class App {
       exercise.id, exercise.validation_type);
     exercise.attempts++;
 
-    // Mute display during validation — internal serial commands (find, rm)
-    // should be invisible. Also set validating flag to prevent the sentinel
-    // captures from those commands from recursively triggering validation.
+    // Re-entrancy guard: validation reads from v86's host-side filesystem
+    // (no serial commands), but the async calls yield to the event loop
+    // where another onCommand could fire.
     this.validating = true;
-    const origDisplay = this.sentinel.onDisplay;
-    this.sentinel.onDisplay = () => {};
-
-    // Pre-skip sentinel pairs from internal validation commands.
-    // execCommand sends 2 serial commands (cmd > tmp, rm tmp), each producing
-    // a CMD_END+CMD_START sentinel pair. Skipping them here — instead of
-    // relying solely on the 600ms timer + validating guard — ensures
-    // late-arriving sentinels don't consume the prompt-kick skip and trigger
-    // phantom duplicate validation.
-    const vt = exercise.validation_type;
-    if (vt === "dir_with_file" || vt === "any_file_contains") {
-      this.sentinel.skipNextCapture();
-      this.sentinel.skipNextCapture();
-    }
 
     let validation: { passed: boolean; message: string };
     try {
       console.log("[handleCommand] calling validator.validate for exercise %s", exercise.id);
       validation = await this.validator!.validate(exercise, result);
       console.log("[handleCommand] validation result: passed=%s message=%s", validation.passed, validation.message);
-
-      // Wait for trailing serial data from validation commands to be
-      // processed while display is still muted
-      await new Promise((r) => setTimeout(r, 600));
     } finally {
-      console.log("[handleCommand] restoring onDisplay, clearing validating flag");
-      this.sentinel.onDisplay = origDisplay;
       this.validating = false;
     }
+
+    // Mute stale serial display bytes (old prompt remnants still in the
+    // pipeline) until the next CMD_START sentinel.  System messages bypass
+    // this mute — they go through displayQueue, not the serial display path.
+    // The \n kick at the end triggers PROMPT_COMMAND → CMD_END (skipped) →
+    // CMD_START (clears mute) → fresh PS1 prompt renders cleanly.
+    this.sentinel.muteUntilNextPrompt();
 
     if (validation.passed) {
       console.log("[handleCommand] PASSED! Marking exercise %s as completed, advancing from %d",
@@ -475,9 +502,14 @@ export class App {
   // ── Slash commands ────────────────────────────────────────────────
 
   private handleSlashCommand(cmd: string): void {
-    this.sentinel.skipNextCapture();
     const parts = cmd.toLowerCase().split(/\s+/);
     const command = parts[0];
+
+    // Commands that navigate away from the current terminal context handle
+    // their own sentinel coordination (openLessonByMeta, backToPicker, etc.).
+    // For all other commands, we apply the standard pattern at the end:
+    //   skipNextCapture + muteUntilNextPrompt + sendSerial('\n')
+    let needsPromptKick = true;
 
     switch (command) {
       case "/help":
@@ -489,8 +521,13 @@ export class App {
         break;
       case "/lesson": {
         const num = parseInt(parts[1], 10);
-        if (!isNaN(num)) this.openLessonByNumber(num);
-        else this.sentinel.queueSystemMessage("Usage: /lesson <number>");
+        if (!isNaN(num)) {
+          // openLessonByMeta handles its own prompt kick
+          needsPromptKick = false;
+          this.openLessonByNumber(num);
+        } else {
+          this.sentinel.queueSystemMessage("Usage: /lesson <number>");
+        }
         break;
       }
       case "/hint":
@@ -500,6 +537,8 @@ export class App {
         this.skipExercise();
         break;
       case "/reset":
+        // resetSandbox handles its own prompt kick
+        needsPromptKick = false;
         this.resetSandbox();
         break;
       case "/status":
@@ -512,12 +551,24 @@ export class App {
         this.toggleSidebar(false);
         break;
       case "/back":
+        // backToPicker destroys the VM entirely
+        needsPromptKick = false;
         this.backToPicker();
         break;
       default:
         this.sentinel.queueSystemMessage(
           `Unknown: ${cmd}. Type /help for commands.`,
         );
+    }
+
+    // Standard prompt refresh: mute stale serial bytes, skip the kicked
+    // command's sentinel, and send \n to trigger a fresh PROMPT_COMMAND
+    // cycle.  This ensures system messages render cleanly without old
+    // prompt fragments leaking through.
+    if (needsPromptKick) {
+      this.sentinel.muteUntilNextPrompt();
+      this.sentinel.skipNextCapture();
+      this.vm?.sendSerial('\n');
     }
   }
 
@@ -594,9 +645,15 @@ export class App {
   private async openLessonByNumber(num: number): Promise<void> {
     const meta = this.lessonsMeta.find((m) => m.order === num);
     if (!meta) {
+      // Lesson not found — queue error message with proper prompt refresh.
+      // (openLessonByMeta won't run, so we handle the kick here.)
       this.sentinel.queueSystemMessage(`Lesson ${num} not found.`);
+      this.sentinel.muteUntilNextPrompt();
+      this.sentinel.skipNextCapture();
+      this.vm?.sendSerial('\n');
       return;
     }
+    // openLessonByMeta handles its own muteUntilNextPrompt + prompt kick.
     await this.openLessonByMeta(meta);
   }
 
@@ -619,10 +676,15 @@ export class App {
       }
     }
 
-    // Seed lesson files silently when switching lessons (not pre-seeded)
+    // Seed lesson files silently when switching lessons (not pre-seeded).
+    // seedLessonSetup enables byte-level suppression — lift after clear.
     if (!preloaded) {
       await this.seedLessonSetup(lesson, true);
+      this.clearSerialBuffer?.();
       this.terminalPane?.term.clear();
+      this.serialSuppressed = false;
+      this.seeding = false;
+      this.restoreDisplay();
     }
 
     // Show lesson content in sidebar
@@ -646,8 +708,10 @@ export class App {
       this.sentinel.queueSystemMessage("All exercises complete!");
     }
 
-    // Trigger fresh prompt after messages
-    console.log("[openLessonByMeta] skipNextCapture + sending \\n for fresh prompt");
+    // Trigger fresh prompt after messages — mute stale serial bytes until
+    // the kicked \n produces CMD_START for the fresh prompt.
+    console.log("[openLessonByMeta] muteUntilNextPrompt + skipNextCapture + sending \\n");
+    this.sentinel.muteUntilNextPrompt();
     this.sentinel.skipNextCapture();
     this.vm?.sendSerial('\n');
 
@@ -687,10 +751,18 @@ export class App {
 
   /**
    * Seed all exercise files for an entire lesson at once, silently.
-   * Uses create_file() to write a script (invisible), then executes
-   * it with display muted so nothing appears in the terminal.
    *
-   * @param clean  If true, remove existing /root files first (for lesson switch / reset).
+   * ARCHITECTURE — Byte-level serial suppression makes leakage impossible:
+   *
+   *   1. serialSuppressed=true → byte handler discards ALL serial output.
+   *      No bytes enter the buffer, no flush timers fire, no processOutput.
+   *   2. onDisplay set to no-op as belt-and-suspenders safety net.
+   *   3. Seed completion detected by polling 9p filesystem for the seed
+   *      script's removal — deterministic, no hardcoded timer.
+   *   4. The CALLER lifts suppression synchronously after term.clear(),
+   *      ensuring zero stale bytes can reach the terminal.
+   *
+   * @param clean  If true, remove existing files first (for lesson switch / reset).
    */
   private async seedLessonSetup(lesson: LessonData, clean = false): Promise<void> {
     if (!this.vm) return;
@@ -707,27 +779,41 @@ export class App {
     }
     if (commands.length === 0) return;
 
-    // Mute terminal display during seeding
-    console.log("[seedLessonSetup] muting display, skipNextCapture for seed script (%d commands)", commands.length);
-    const origDisplay = this.sentinel.onDisplay;
+    console.log("[seedLessonSetup] seeding %d commands", commands.length);
+
+    // Block handleCommand from acting on stale sentinels
+    this.seeding = true;
+
+    // Byte-level suppression: discard all serial output at the source.
+    // No bytes enter buffer → no flush timers → no processOutput calls.
+    this.serialSuppressed = true;
+    this.clearSerialBuffer?.();
+
+    // Belt-and-suspenders: also disconnect display callback.
     this.sentinel.onDisplay = () => {};
 
-    // Skip sentinel capture for the seed script command
-    this.sentinel.skipNextCapture();
-
-    // Write seed commands as a script via filesystem API (invisible)
+    // Write seed commands as a script via 9p filesystem API (invisible)
     const script = commands.join("\n") + "\n";
     await this.vm.writeFile("/tmp/_clitutor_seed.sh", script);
     this.vm.sendSerial(
       "sh /tmp/_clitutor_seed.sh >/dev/null 2>&1; rm -f /tmp/_clitutor_seed.sh\n",
     );
 
-    // Wait for execution (longer for git operations)
-    const hasGit = commands.some((c) => c.includes("git"));
-    await new Promise((r) => setTimeout(r, hasGit ? 3000 : 800));
+    // Wait for seed completion by polling 9p filesystem.
+    // The seed script file is deleted as the last step of the serial
+    // command — its removal signals all seed commands have executed.
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      await new Promise<void>(r => setTimeout(r, 50));
+      if (!(await this.vm.fileExists("/tmp/_clitutor_seed.sh"))) break;
+    }
 
-    // Unmute display (no serial clear — it races with message display)
-    this.sentinel.onDisplay = origDisplay;
+    console.log("[seedLessonSetup] seed complete (script removed from 9p)");
+  }
+
+  /** Reconnect the sentinel display callback to the terminal. */
+  private restoreDisplay(): void {
+    this.sentinel.onDisplay = (text) => this.terminalPane?.write(text);
   }
 
   private showHint(): void {
@@ -757,10 +843,15 @@ export class App {
 
   private async resetSandbox(): Promise<void> {
     if (!this.vm || !this.currentLesson) return;
-    this.sentinel.queueSystemMessage("Resetting sandbox...");
+    // seedLessonSetup enables byte-level suppression — lift after clear
     await this.seedLessonSetup(this.currentLesson, true);
+    this.clearSerialBuffer?.();
     this.terminalPane?.term.clear();
+    this.serialSuppressed = false;
+    this.seeding = false;
+    this.restoreDisplay();
     this.sentinel.queueSystemMessage("Sandbox reset.");
+    this.sentinel.muteUntilNextPrompt();
     this.sentinel.skipNextCapture();
     this.vm.sendSerial('\n');
   }
