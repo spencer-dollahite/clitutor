@@ -45,9 +45,9 @@ Display all network interfaces and their IP addresses.
 `ping` sends ICMP echo requests to test if a host is reachable:
 
 ```bash
-ping -c 4 google.com       # send 4 pings then stop
-ping -c 1 192.168.1.1      # single ping
-ping -c 1 -W 2 10.0.0.1    # timeout after 2 seconds
+ping -c 4 gateway.fleet.mil   # send 4 pings then stop
+ping -c 1 192.168.1.1         # single ping
+ping -c 1 -W 2 10.0.0.1       # timeout after 2 seconds
 ```
 
 > **Note:** Some networks block ICMP, so a failed ping does not always mean the
@@ -77,14 +77,14 @@ Send a single ping to localhost (127.0.0.1) and confirm it is received.
 
 ```bash
 # curl - transfer data from/to a server
-curl https://example.com               # fetch a page
-curl -o file.html https://example.com   # save to file
-curl -I https://example.com             # headers only
-curl -s https://api.example.com/data    # silent mode (no progress)
+curl http://localhost                   # fetch a page from a local server
+curl -o file.html http://localhost      # save to file
+curl -I http://localhost                # headers only
+curl -s http://localhost                # silent mode (no progress)
 
 # wget - download files
-wget https://example.com/file.tar.gz    # download a file
-wget -q -O- https://example.com        # quiet, output to stdout
+wget http://localhost/index.html        # download a file
+wget -q -O- http://localhost           # quiet, output to stdout
 ```
 
 `curl` is especially useful for working with APIs:
@@ -92,12 +92,12 @@ wget -q -O- https://example.com        # quiet, output to stdout
 ```bash
 curl -X POST -H "Content-Type: application/json" \
      -d '{"key":"value"}' \
-     https://api.example.com/endpoint
+     http://localhost/api/endpoint
 ```
 
 <!-- exercise
 id: ex03
-title: Fetch HTTP headers
+title: Fetch HTTP headers from the local web server
 xp: 15
 difficulty: 2
 sandbox_setup: null
@@ -105,43 +105,52 @@ validation_type: output_contains
 expected: HTTP
 hints:
   - "Use curl with a flag that shows only the response headers."
-  - "The -I flag fetches HTTP headers only."
-  - "Type: `curl -sI http://example.com`"
+  - "The -I flag fetches HTTP headers only. Use -s for silent mode."
+  - "Type: `curl -sI http://localhost`"
 -->
-### Exercise 3: Fetch HTTP headers
-Fetch only the HTTP headers from `http://example.com` using curl.
+### Exercise 3: Fetch HTTP headers from the local web server
+An nginx web server is running on this system. Fetch only the HTTP response
+headers from `http://localhost` using curl.
 
 ---
 
-## `nslookup` / `dig` -- DNS Lookups
+## DNS Configuration
 
-DNS translates domain names to IP addresses. These tools let you query DNS
-directly:
+DNS (Domain Name System) translates domain names to IP addresses. Your system's
+DNS resolver configuration lives in `/etc/resolv.conf`:
+
+```bash
+cat /etc/resolv.conf              # view configured DNS servers
+```
+
+The file lists `nameserver` entries -- the DNS servers your system queries when
+resolving domain names. Common public DNS servers include Google (8.8.8.8) and
+Cloudflare (1.1.1.1).
+
+When you have network access, you can query DNS directly with tools like
+`nslookup` and `dig`:
 
 ```bash
 nslookup example.com              # simple DNS lookup
-nslookup -type=MX example.com     # mail server records
-
 dig example.com                    # detailed DNS query
 dig +short example.com            # just the IP
-dig example.com MX                # mail records
 ```
 
 <!-- exercise
 id: ex04
-title: Look up a domain
+title: View DNS resolver configuration
 xp: 15
 difficulty: 2
 sandbox_setup: null
-validation_type: output_regex
-expected: "\\d+\\.\\d+\\.\\d+\\.\\d+"
+validation_type: output_contains
+expected: nameserver
 hints:
-  - "Use a DNS lookup tool to resolve a domain name."
-  - "nslookup is a simple DNS query tool."
-  - "Type: `nslookup example.com`"
+  - "DNS resolver settings are stored in a system configuration file."
+  - "The file is /etc/resolv.conf. Use cat to view it."
+  - "Type: `cat /etc/resolv.conf`"
 -->
-### Exercise 4: Look up a domain
-Perform a DNS lookup for `example.com`.
+### Exercise 4: View DNS resolver configuration
+Display the system's DNS resolver configuration to see which nameservers are configured.
 
 ---
 
@@ -152,7 +161,7 @@ Before querying DNS, your system checks `/etc/hosts` for local name mappings:
 ```
 127.0.0.1   localhost
 127.0.1.1   myhostname
-192.168.1.10 devserver
+172.16.50.10 shore-server
 ```
 
 This is useful for:
@@ -238,14 +247,14 @@ xp: 20
 difficulty: 2
 sandbox_setup: null
 validation_type: file_contains
-expected: my_hosts::127.0.0.1 myapp.local
+expected: my_hosts::127.0.0.1 cic-display.local
 hints:
   - "Create a file with a hosts-style entry mapping a hostname to an IP."
   - "Use echo with redirection to write the entry."
-  - "Type: `echo '127.0.0.1 myapp.local' > my_hosts`"
+  - "Type: `echo '127.0.0.1 cic-display.local' > my_hosts`"
 -->
 ### Exercise 7: Write a local hosts entry
-Create a file called `my_hosts` containing a hosts entry that maps `myapp.local` to `127.0.0.1`.
+Create a file called `my_hosts` containing a hosts entry that maps `cic-display.local` to `127.0.0.1`.
 
 ---
 

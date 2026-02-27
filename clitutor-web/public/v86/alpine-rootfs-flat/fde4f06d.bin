@@ -1,0 +1,35 @@
+#!/bin/bash
+# script_name.sh - Description of what this script does
+# Usage: script_name.sh [options]
+#
+# Author: student@nps.edu
+# Date: YYYY-MM-DD
+
+set -euo pipefail
+
+# --- Configuration ---
+VERBOSE=false
+
+# --- Functions ---
+usage() {
+    echo "Usage: $(basename "$0") [options]"
+    echo "  -v    Verbose output"
+    echo "  -h    Show this help"
+}
+
+log() {
+    if $VERBOSE; then
+        echo "[$(date '+%H:%M:%S')] $*"
+    fi
+}
+
+# --- Main ---
+while getopts "vh" opt; do
+    case $opt in
+        v) VERBOSE=true ;;
+        h) usage; exit 0 ;;
+        *) usage; exit 1 ;;
+    esac
+done
+
+echo "TODO: Implement script logic here"

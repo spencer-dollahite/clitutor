@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Disallow: /internal/
+
+# Fleet monitoring dashboard - authorized access only
+# Contact: admin@fleet.mil

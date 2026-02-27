@@ -1,0 +1,13 @@
+[user]
+	name = Student User
+	email = student@nps.edu
+[alias]
+	st = status
+	co = checkout
+	br = branch
+	ci = commit
+	lg = log --oneline --graph --decorate
+[core]
+	editor = vim
+[color]
+	ui = auto

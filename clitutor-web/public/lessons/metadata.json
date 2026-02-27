@@ -157,28 +157,28 @@
       "file": "12_dotfiles.md"
     },
     {
-      "id": "13_installing_stuff",
-      "title": "Installing Software",
-      "slug": "installing-stuff",
+      "id": "13_network_security",
+      "title": "Network Security Tools",
+      "slug": "network-security",
       "order": 13,
-      "category": "system admin",
-      "difficulty": 2,
-      "description": "Install and manage software with package managers",
-      "xp": 90,
-      "exercise_count": 5,
-      "file": "13_installing_stuff.md"
+      "category": "security",
+      "difficulty": 3,
+      "description": "Scan ports with nmap, capture packets with tcpdump, and configure firewall rules with iptables",
+      "xp": 120,
+      "exercise_count": 6,
+      "file": "13_network_security.md"
     },
     {
-      "id": "14_docker",
-      "title": "Docker Basics",
-      "slug": "docker",
+      "id": "14_next_steps",
+      "title": "Next Steps: Beyond the Browser",
+      "slug": "next-steps",
       "order": 14,
-      "category": "devops",
-      "difficulty": 4,
-      "description": "Container fundamentals with Docker: images, containers, and volumes",
-      "xp": 150,
-      "exercise_count": 6,
-      "file": "14_docker.md"
+      "category": "graduation",
+      "difficulty": 1,
+      "description": "Set up a real Linux environment and plan your next learning goals",
+      "xp": 50,
+      "exercise_count": 3,
+      "file": "14_next_steps.md"
     }
   ]
 }

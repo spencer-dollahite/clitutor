@@ -1,0 +1,9 @@
+# DANGER: This file contains credentials!
+# It should NEVER be committed to git.
+# Make sure .env is in your .gitignore
+
+FLEET_API_KEY=sk-fleet-4f8a2b1c9d3e7f6a5b0c8d2e1f4a7b3c
+MONITOR_DB_PASSWORD=sup3r_s3cr3t_passw0rd!
+SMTP_PASSWORD=email_relay_2024
+ADMIN_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fakepayload.fakesig
+SLACK_WEBHOOK=https://hooks.slack.example.com/services/T00000/B00000/XXXXXXXXXXXX

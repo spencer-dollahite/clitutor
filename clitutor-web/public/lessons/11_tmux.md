@@ -16,10 +16,10 @@ your work continues running even if you disconnect.
 
 ```bash
 tmux                          # start a new session
-tmux new -s mysession         # start a named session
+tmux new -s watchfloor        # start a named session
 tmux ls                       # list existing sessions
-tmux attach -t mysession      # reattach to a session
-tmux kill-session -t mysession # kill a session
+tmux attach -t watchfloor     # reattach to a session
+tmux kill-session -t watchfloor # kill a session
 ```
 
 <!-- exercise
@@ -126,12 +126,12 @@ sandbox_setup: null
 validation_type: file_contains
 expected: long_running.sh::echo "Process complete"
 hints:
-  - "Create a script that simulates a long-running process."
+  - "Create a script that simulates a long-running monitoring process."
   - "Write a script with a sleep and a completion message."
-  - "Type: `printf '#!/bin/bash\\necho \"Starting process...\"\\nsleep 1\\necho \"Process complete\"\\n' > long_running.sh && chmod +x long_running.sh`"
+  - "Type: `printf '#!/bin/bash\\necho \"Starting network monitor...\"\\nsleep 1\\necho \"Process complete\"\\n' > long_running.sh && chmod +x long_running.sh`"
 -->
 ### Exercise 3: Simulate session persistence
-Create an executable script called `long_running.sh` that prints `Starting process...`, sleeps, then prints `Process complete`.
+Create an executable script called `long_running.sh` that prints `Starting network monitor...`, sleeps, then prints `Process complete`.
 
 ---
 
@@ -202,13 +202,13 @@ Create a file called `my_tmux.conf` with tmux settings including `set -g mouse o
 
 ## Named Sessions and Workflow
 
-Power users create named sessions for different projects:
+Power users create named sessions for different monitoring tasks:
 
 ```bash
-# Start project-specific sessions
-tmux new -s work
-tmux new -s personal
-tmux new -s monitoring
+# Start operations-specific sessions
+tmux new -s watchfloor
+tmux new -s logs
+tmux new -s network
 
 # Quick switch between sessions
 Ctrl+b s              # interactive session picker
@@ -227,10 +227,10 @@ expected: tmux_start.sh::tmux new-session
 hints:
   - "Write a script that creates a tmux session with specific setup."
   - "Use tmux new-session with the -d flag to start detached."
-  - "Type: `printf '#!/bin/bash\\ntmux new-session -d -s work\\ntmux send-keys -t work \"echo ready\" Enter\\necho \"Session created\"\\n' > tmux_start.sh && chmod +x tmux_start.sh`"
+  - "Type: `printf '#!/bin/bash\\ntmux new-session -d -s watchfloor\\ntmux send-keys -t watchfloor \"echo ready\" Enter\\necho \"Session created\"\\n' > tmux_start.sh && chmod +x tmux_start.sh`"
 -->
 ### Exercise 5: Write a tmux startup script
-Create a script called `tmux_start.sh` that programmatically creates a tmux session named `work`.
+Create a script called `tmux_start.sh` that programmatically creates a tmux session named `watchfloor`.
 
 ---
 

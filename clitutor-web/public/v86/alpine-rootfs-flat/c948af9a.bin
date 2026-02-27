@@ -1,0 +1,15 @@
+Jan 15 00:00:01 clitutor syslogd: started: BusyBox v1.36
+Jan 15 00:00:02 clitutor kernel: Linux version 6.6.63-0-virt (buildozer@build-node)
+Jan 15 00:00:02 clitutor kernel: Command line: root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose
+Jan 15 00:00:03 clitutor kernel: 9pnet_virtio: registered virtio transport
+Jan 15 00:00:04 clitutor kernel: 9p: Installing v9fs 9p2000 file system support
+Jan 15 00:00:05 clitutor openrc: starting system initialization
+Jan 15 00:00:06 clitutor openrc: service devfs started
+Jan 15 00:00:07 clitutor openrc: service mdev started
+Jan 15 00:00:08 clitutor openrc: service networking started
+Jan 15 00:00:09 clitutor openrc: service sshd started
+Jan 15 00:00:09 clitutor sshd[892]: Server listening on 0.0.0.0 port 22
+Jan 15 00:00:10 clitutor openrc: service nginx started
+Jan 15 00:00:10 clitutor nginx[901]: nginx/1.24.0
+Jan 15 00:00:11 clitutor openrc: boot sequence complete
+Jan 15 00:05:00 clitutor crond[950]: job health_check.sh completed, exit 0

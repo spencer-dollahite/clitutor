@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fleet Status Dashboard</title>
+<style>
+body { font-family: monospace; background: #1a1a2e; color: #0f0; padding: 2em; }
+h1 { color: #00d4ff; }
+table { border-collapse: collapse; margin-top: 1em; }
+th, td { border: 1px solid #333; padding: 0.5em 1em; text-align: left; }
+th { background: #16213e; color: #00d4ff; }
+.ok { color: #0f0; } .warn { color: #ff0; } .down { color: #f00; }
+</style>
+</head>
+<body>
+<h1>Fleet Shore Station Monitor</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fleet Status Dashboard</title>
+<style>
+body { font-family: monospace; background: #1a1a2e; color: #0f0; padding: 2em; }
+h1 { color: #00d4ff; }
+table { border-collapse: collapse; margin-top: 1em; }
+th, td { border: 1px solid #333; padding: 0.5em 1em; text-align: left; }
+th { background: #16213e; color: #00d4ff; }
+.ok { color: #0f0; } .warn { color: #ff0; } .down { color: #f00; }
+</style>
+</head>
+<body>
+<h1>Fleet Shore Station Monitor</h1>
+<p>Last updated: 2025-01-15 18:45:00 UTC</p>
+<table>
+<tr><th>Host</th><th>Status</th><th>Uptime</th><th>Load</th></tr>
+<tr><td>shore-hq</td><td class="ok">ONLINE</td><td>45d 12h</td><td>0.42</td></tr>
+<tr><td>shore-

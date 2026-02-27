@@ -127,18 +127,18 @@ title: Add a directory to PATH
 xp: 15
 difficulty: 2
 sandbox_setup:
-  - "mkdir -p mybin"
-  - "printf '#!/bin/bash\\necho \"custom command works\"\\n' > mybin/mycmd"
-  - "chmod +x mybin/mycmd"
+  - "mkdir -p navbin"
+  - "printf '#!/bin/bash\\necho \"firewall status: nominal\"\\n' > navbin/chk_firewall"
+  - "chmod +x navbin/chk_firewall"
 validation_type: output_contains
-expected: custom command works
+expected: "firewall status: nominal"
 hints:
   - "Export PATH with your new directory prepended, then run the command."
-  - "Use export PATH=\"$PWD/mybin:$PATH\" to add the directory."
-  - "Type: `export PATH=\"$PWD/mybin:$PATH\" && mycmd`"
+  - "Use export PATH=\"$PWD/navbin:$PATH\" to add the directory."
+  - "Type: `export PATH=\"$PWD/navbin:$PATH\" && chk_firewall`"
 -->
 ### Exercise 4: Add a directory to PATH
-Add the `mybin` directory to your PATH and run the `mycmd` command that lives inside it.
+Add the `navbin` directory to your PATH and run the `chk_firewall` command that lives inside it.
 
 ---
 
@@ -189,17 +189,17 @@ title: Run a local script
 xp: 15
 difficulty: 2
 sandbox_setup:
-  - "printf '#!/bin/bash\\necho \"local script executed\"\\n' > localtest.sh"
-  - "chmod +x localtest.sh"
+  - "printf '#!/bin/bash\\necho \"port scan initiated\"\\n' > scan_ports.sh"
+  - "chmod +x scan_ports.sh"
 validation_type: output_contains
-expected: local script executed
+expected: port scan initiated
 hints:
   - "Scripts in the current directory need a special prefix to run."
   - "Use ./ before the script name to run it from the current directory."
-  - "Type: `./localtest.sh`"
+  - "Type: `./scan_ports.sh`"
 -->
 ### Exercise 6: Run a local script
-Execute the `localtest.sh` script in the current directory.
+Execute the `scan_ports.sh` script in the current directory.
 
 ---
 

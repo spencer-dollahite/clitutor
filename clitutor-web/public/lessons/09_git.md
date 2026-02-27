@@ -8,7 +8,7 @@ code. Every developer and sysadmin should know git basics.
 
 ```bash
 git init                  # create a new git repo in the current directory
-git init my-project       # create a new repo in a new directory
+git init network-configs  # create a new repo in a new directory
 ```
 
 This creates a hidden `.git` directory that stores all version history.
@@ -24,10 +24,10 @@ expected: Initialized
 hints:
   - "Use the git command that creates a new repository."
   - "The subcommand is 'init'."
-  - "Type: `git init myrepo`"
+  - "Type: `git init network-configs`"
 -->
 ### Exercise 1: Initialize a git repository
-Create a new git repository called `myrepo`.
+Create a new git repository called `network-configs`.
 
 ---
 
@@ -58,16 +58,16 @@ title: Add and check status
 xp: 15
 difficulty: 2
 sandbox_setup:
-  - "git init myrepo"
+  - "git init network-configs"
 validation_type: output_contains
 expected: new file
 hints:
   - "Create a file inside the repo, add it to staging, and check status."
   - "Use touch to create, git add to stage, and git status to check."
-  - "Type: `cd myrepo && touch README.md && git add README.md && git status`"
+  - "Type: `cd network-configs && touch README.md && git add README.md && git status`"
 -->
 ### Exercise 2: Add and check status
-Inside the `myrepo` repository, create a `README.md` file, stage it, and check the status.
+Inside the `network-configs` repository, create a `README.md` file, stage it, and check the status.
 
 ---
 
@@ -90,17 +90,17 @@ title: Make your first commit
 xp: 20
 difficulty: 2
 sandbox_setup:
-  - "git init myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md"
+  - "git init network-configs"
+  - "cd network-configs && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md"
 validation_type: output_contains
-expected: "initial commit"
+expected: "initial baseline config"
 hints:
   - "Use git commit with the -m flag to provide a message."
   - "The message should be in quotes after -m."
-  - "Type: `cd myrepo && git commit -m 'initial commit'`"
+  - "Type: `cd network-configs && git commit -m 'initial baseline config'`"
 -->
 ### Exercise 3: Make your first commit
-Commit the staged `README.md` with the message `initial commit`.
+Commit the staged `README.md` with the message `initial baseline config`.
 
 ---
 
@@ -120,17 +120,17 @@ title: View the log
 xp: 10
 difficulty: 2
 sandbox_setup:
-  - "git init myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
+  - "git init network-configs"
+  - "cd network-configs && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial baseline config'"
 validation_type: output_contains
-expected: initial commit
+expected: initial baseline config
 hints:
   - "Use the git command that shows commit history."
   - "The subcommand is 'log'."
-  - "Type: `cd myrepo && git log --oneline`"
+  - "Type: `cd network-configs && git log --oneline`"
 -->
 ### Exercise 4: View the log
-View the commit history of `myrepo` in one-line format.
+View the commit history of `network-configs` in one-line format.
 
 ---
 
@@ -139,12 +139,12 @@ View the commit history of `myrepo` in one-line format.
 Branches let you work on features or fixes in isolation:
 
 ```bash
-git branch                # list branches
-git branch feature        # create a branch called 'feature'
-git checkout feature      # switch to the branch
-git checkout -b feature   # create AND switch (shortcut)
-git switch feature        # modern alternative to checkout
-git switch -c feature     # create AND switch (modern)
+git branch                        # list branches
+git branch patch-firewall-rules   # create a branch
+git checkout patch-firewall-rules # switch to the branch
+git checkout -b patch-firewall-rules  # create AND switch (shortcut)
+git switch patch-firewall-rules   # modern alternative to checkout
+git switch -c patch-firewall-rules    # create AND switch (modern)
 ```
 
 <!-- exercise
@@ -153,17 +153,17 @@ title: Create and switch to a branch
 xp: 15
 difficulty: 3
 sandbox_setup:
-  - "git init myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
+  - "git init network-configs"
+  - "cd network-configs && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial baseline config'"
 validation_type: output_contains
-expected: feature
+expected: patch-firewall-rules
 hints:
   - "Use git checkout -b or git switch -c to create and switch to a new branch."
   - "Then verify with git branch to see the current branch."
-  - "Type: `cd myrepo && git checkout -b feature && git branch`"
+  - "Type: `cd network-configs && git checkout -b patch-firewall-rules && git branch`"
 -->
 ### Exercise 5: Create and switch to a branch
-In `myrepo`, create a new branch called `feature` and switch to it. List branches to verify.
+In `network-configs`, create a new branch called `patch-firewall-rules` and switch to it. List branches to verify.
 
 ---
 
@@ -172,8 +172,8 @@ In `myrepo`, create a new branch called `feature` and switch to it. List branche
 Bring changes from one branch into another:
 
 ```bash
-git checkout main         # switch to the target branch
-git merge feature         # merge feature into main
+git checkout main                 # switch to the target branch
+git merge patch-firewall-rules    # merge feature branch into main
 ```
 
 If git cannot automatically merge (both branches changed the same lines), you
@@ -190,19 +190,19 @@ title: Merge a branch
 xp: 20
 difficulty: 3
 sandbox_setup:
-  - "git init -b main myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
-  - "cd myrepo && git checkout -b feature"
-  - "cd myrepo && echo 'new feature' > feature.txt && git add feature.txt && git commit -m 'add feature'"
+  - "git init -b main network-configs"
+  - "cd network-configs && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial baseline config'"
+  - "cd network-configs && git checkout -b patch-firewall-rules"
+  - "cd network-configs && echo 'ACCEPT TCP/8443 0.0.0.0/0' > firewall_patch.txt && git add firewall_patch.txt && git commit -m 'add HTTPS alt port rule'"
 validation_type: output_contains
-expected: feature.txt
+expected: firewall_patch.txt
 hints:
   - "Switch back to the main branch and merge the feature branch."
   - "Use git checkout then git merge."
-  - "Type: `cd myrepo && git checkout main && git merge feature && ls`"
+  - "Type: `cd network-configs && git checkout main && git merge patch-firewall-rules && ls`"
 -->
 ### Exercise 6: Merge a branch
-Switch back to the main branch in `myrepo` and merge the `feature` branch. List files to confirm.
+Switch back to the main branch in `network-configs` and merge the `patch-firewall-rules` branch. List files to confirm.
 
 ---
 
@@ -225,16 +225,16 @@ title: Configure git user
 xp: 10
 difficulty: 2
 sandbox_setup:
-  - "git init myrepo"
+  - "git init network-configs"
 validation_type: output_contains
-expected: learner
+expected: operator
 hints:
   - "Set your git user name using git config."
   - "The command is git config user.name followed by the name in quotes."
-  - "Type: `cd myrepo && git config user.name 'learner' && git config user.name`"
+  - "Type: `cd network-configs && git config user.name 'operator' && git config user.name`"
 -->
 ### Exercise 7: Configure git user
-Set the git user name to `learner` in the `myrepo` repository and verify it.
+Set the git user name to `operator` in the `network-configs` repository and verify it.
 
 ---
 
@@ -245,11 +245,9 @@ The `.gitignore` file tells git which files to ignore:
 ```
 # .gitignore
 *.log
-*.tmp
-node_modules/
+*.pcap
 .env
-__pycache__/
-.DS_Store
+credentials/
 ```
 
 Files listed here will not appear in `git status` and will not be staged.
@@ -260,16 +258,16 @@ title: Create a .gitignore
 xp: 15
 difficulty: 2
 sandbox_setup:
-  - "git init myrepo"
+  - "git init network-configs"
 validation_type: file_contains
-expected: myrepo/.gitignore::*.log
+expected: network-configs/.gitignore::*.log
 hints:
   - "Create a .gitignore file with patterns for files to ignore."
   - "Use echo or printf with redirection."
-  - "Type: `printf '*.log\\n*.tmp\\nnode_modules/\\n' > myrepo/.gitignore`"
+  - "Type: `printf '*.log\\n*.pcap\\n.env\\ncredentials/\\n' > network-configs/.gitignore`"
 -->
 ### Exercise 8: Create a .gitignore
-Create a `.gitignore` file in `myrepo` that ignores `*.log` and `*.tmp` files and the `node_modules/` directory.
+Create a `.gitignore` file in `network-configs` that ignores `*.log` and `*.pcap` files, `.env`, and the `credentials/` directory.
 
 ---
 

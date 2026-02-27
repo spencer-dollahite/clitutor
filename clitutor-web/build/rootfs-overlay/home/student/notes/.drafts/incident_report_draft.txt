@@ -1,0 +1,31 @@
+INCIDENT REPORT - DRAFT
+=======================
+Classification: UNCLASSIFIED // FOR OFFICIAL USE ONLY
+
+Date: 2025-01-15
+Reported by: Student User
+Status: DRAFT - DO NOT DISTRIBUTE
+
+Subject: Suspected Brute-Force SSH Attack on shore-hq
+
+Timeline:
+  0427 UTC - Multiple failed SSH login attempts detected from 203.0.113.45
+  0427 UTC - Targeted users: root, admin, test, guest, oracle
+  0427 UTC - 7 failed attempts in 18 seconds (automated attack pattern)
+  0600 UTC - Legitimate login from monitoring station (10.0.100.5)
+  0942 UTC - Second attack wave from different IP: 198.51.100.77
+  0942 UTC - Targeted users: root, postgres
+
+Analysis:
+  - Attack source IPs are in documentation ranges (203.0.113.0/24, 198.51.100.0/24)
+  - Common username dictionary pattern (root, admin, test, guest, oracle, postgres)
+  - Rapid succession suggests automated tool (hydra, medusa, or similar)
+  - No successful compromises detected
+
+Recommendations:
+  1. Implement fail2ban to block IPs after 3 failed attempts
+  2. Disable password authentication; require SSH keys only
+  3. Consider moving SSH to non-standard port
+  4. Add source IP to firewall block list
+
+TODO: Get sign-off from ISSM before submitting

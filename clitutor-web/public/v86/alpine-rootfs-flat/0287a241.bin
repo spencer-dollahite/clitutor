@@ -1,0 +1,18 @@
+Jan 15 03:14:22 shore-hq sshd[1042]: Accepted publickey for admin from 10.0.1.11 port 52340 ssh2
+Jan 15 03:14:22 shore-hq sshd[1042]: pam_unix(sshd:session): session opened for user admin
+Jan 15 04:27:01 shore-hq sshd[1189]: Failed password for root from 203.0.113.45 port 44821 ssh2
+Jan 15 04:27:04 shore-hq sshd[1189]: Failed password for root from 203.0.113.45 port 44821 ssh2
+Jan 15 04:27:06 shore-hq sshd[1189]: Failed password for root from 203.0.113.45 port 44821 ssh2
+Jan 15 04:27:09 shore-hq sshd[1190]: Failed password for admin from 203.0.113.45 port 44830 ssh2
+Jan 15 04:27:12 shore-hq sshd[1191]: Failed password for invalid user test from 203.0.113.45 port 44835 ssh2
+Jan 15 04:27:15 shore-hq sshd[1192]: Failed password for invalid user guest from 203.0.113.45 port 44840 ssh2
+Jan 15 04:27:18 shore-hq sshd[1193]: Failed password for invalid user oracle from 203.0.113.45 port 44845 ssh2
+Jan 15 06:00:01 shore-hq sshd[1301]: Accepted publickey for student from 10.0.100.5 port 38922 ssh2
+Jan 15 06:00:01 shore-hq sshd[1301]: pam_unix(sshd:session): session opened for user student
+Jan 15 08:15:33 shore-hq sshd[1455]: Accepted password for student from 10.0.1.12 port 60100 ssh2
+Jan 15 09:42:17 shore-hq sshd[1512]: Failed password for root from 198.51.100.77 port 33012 ssh2
+Jan 15 09:42:20 shore-hq sshd[1513]: Failed password for root from 198.51.100.77 port 33018 ssh2
+Jan 15 09:42:23 shore-hq sshd[1514]: Failed password for invalid user postgres from 198.51.100.77 port 33025 ssh2
+Jan 15 12:30:00 shore-hq sshd[1601]: Accepted publickey for admin from 10.0.1.10 port 49200 ssh2
+Jan 15 14:00:05 shore-hq sshd[1601]: pam_unix(sshd:session): session closed for user admin
+Jan 15 18:45:12 shore-hq sshd[1755]: Accepted password for student from 10.0.2.20 port 41500 ssh2

@@ -1,0 +1,9 @@
+# Personal TODO (private)
+- [ ] Finish Lab 5 writeup (due Friday)
+- [ ] Review bash scripting chapters 8-10
+- [ ] Ask Prof about extra credit opportunity
+- [ ] Set up SSH keys for all fleet hosts (tired of typing passwords)
+- [ ] Figure out why my crontab entry isn't running
+- [ ] Clean up ~/data directory — getting messy
+- [x] Submit Lab 4 writeup
+- [x] Fix fleet-monitor config.yaml indentation

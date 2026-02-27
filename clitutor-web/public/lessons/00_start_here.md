@@ -49,10 +49,10 @@ title: List directory contents
 xp: 10
 difficulty: 1
 sandbox_setup:
-  - "touch file1.txt file2.txt file3.txt"
-  - "mkdir subdir"
+  - "touch sitrep.txt roster.txt comms.log"
+  - "mkdir operations"
 validation_type: output_contains
-expected: file1.txt
+expected: sitrep.txt
 hints:
   - "You need to list the files in the current directory."
   - "The command is two letters: list storage."
@@ -75,9 +75,9 @@ path concepts:
 | `..`   | The parent directory (one level up) |
 | `~`    | Your home directory |
 
-**Absolute paths** start from the root: `/home/user/documents`
+**Absolute paths** start from the root: `/home/student/missions`
 
-**Relative paths** start from where you are: `./documents` or just `documents`
+**Relative paths** start from where you are: `./missions` or just `missions`
 
 <!-- exercise
 id: ex03
@@ -85,13 +85,13 @@ title: Change to a subdirectory
 xp: 15
 difficulty: 1
 sandbox_setup:
-  - "mkdir -p projects/webapp"
+  - "mkdir -p missions/operation-typhoon"
 validation_type: cwd_regex
-expected: "/(subdir|projects|webapp|docs|a)(/|$)"
+expected: "/(operations|missions|operation-typhoon|intel|a)(/|$)"
 hints:
   - "You need to change into a subdirectory. Use ls to see what's available."
   - "Use cd followed by the directory name."
-  - "Type: `cd projects`"
+  - "Type: `cd missions`"
 -->
 ### Exercise 3: Change to a subdirectory
 Change into any subdirectory (use `ls` to see what's available).
@@ -137,7 +137,7 @@ title: Show hidden files
 xp: 10
 difficulty: 1
 sandbox_setup:
-  - "touch .hidden_file visible_file"
+  - "touch .classified_config visible_file"
 validation_type: output_regex
 expected: (^|\s)\.\.(\s|$)
 hints:
@@ -156,7 +156,7 @@ The `-l` flag gives you a **l**ong listing with metadata: permissions, owner,
 group, size, modification time, and filename.
 
 ```
--rw-r--r-- 1 alice dev 1234 Aug 30 12:00 notes.txt
+-rw-r--r-- 1 student ops 1234 Aug 30 12:00 watchbill.txt
 ```
 
 You can combine flags: `ls -la` shows a long listing of all files including
@@ -168,8 +168,8 @@ title: Long listing
 xp: 10
 difficulty: 1
 sandbox_setup:
-  - "echo 'hello world' > greeting.txt"
-  - "mkdir docs"
+  - "echo 'SITREP: All quiet on station' > watchbill.txt"
+  - "mkdir intel"
 validation_type: output_regex
 expected: total \d+
 hints:
@@ -199,7 +199,7 @@ Display a detailed (long) listing of the current directory.
 
 <!-- exercise
 id: ex07
-title: Create a directory with a file inside it
+title: Create a directory for mission briefs with a file inside
 xp: 15
 difficulty: 1
 sandbox_setup: null
@@ -208,12 +208,12 @@ expected: ""
 hints:
   - "You need to create a directory first, then create a file inside it."
   - "Use mkdir for the directory and touch for the file."
-  - "Example: `mkdir mydir && touch mydir/myfile.txt`"
+  - "Example: `mkdir briefs && touch briefs/oporder.txt`"
 -->
-### Exercise 7: Create a directory with a file inside it
+### Exercise 7: Create a directory for mission briefs with a file inside
 First, create a new directory using `mkdir`. Then, create an empty file **inside
 that new directory** using `touch`. You can pick any names you like
-(for example, `mkdir mydir && touch mydir/myfile.txt`).
+(for example, `mkdir briefs && touch briefs/oporder.txt`).
 
 ---
 
@@ -231,9 +231,9 @@ that new directory** using `touch`. You can pick any names you like
 - `>>` appends to the file
 
 ```bash
-echo 'hello' > greet.txt     # creates/overwrites greet.txt
-echo 'world' >> greet.txt    # appends to greet.txt
-cat greet.txt                 # shows both lines
+echo 'SITREP: All quiet' > sitrep.txt     # creates/overwrites sitrep.txt
+echo 'No contacts reported' >> sitrep.txt  # appends to sitrep.txt
+cat sitrep.txt                              # shows both lines
 ```
 
 <!-- exercise

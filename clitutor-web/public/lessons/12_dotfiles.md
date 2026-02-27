@@ -25,7 +25,7 @@ title: Find dotfiles in home
 xp: 10
 difficulty: 1
 sandbox_setup:
-  - "touch .bashrc .profile .vimrc .hidden_config"
+  - "touch .bashrc .profile .vimrc .fleet_config"
 validation_type: output_contains
 expected: .bashrc
 hints:
@@ -81,7 +81,7 @@ expected: my_bashrc::alias ll=
 hints:
   - "Write typical bashrc content including an alias."
   - "Use printf or echo with redirection."
-  - "Type: `printf '# My custom bashrc\\nalias ll=\"ls -la\"\\nalias gs=\"git status\"\\nexport EDITOR=vim\\n' > my_bashrc`"
+  - "Type: `printf '# Fleet admin bashrc\\nalias ll=\"ls -la\"\\nalias sshfleet=\"ssh -F ~/.ssh/fleet_config\"\\nexport EDITOR=vim\\n' > my_bashrc`"
 -->
 ### Exercise 2: Create a bashrc file
 Create a file called `my_bashrc` with at least one alias definition (e.g., `alias ll="ls -la"`).
@@ -107,14 +107,14 @@ xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: output_contains
-expected: myconfig loaded
+expected: fleet_profile loaded
 hints:
   - "Create a file that echoes a message, then source it."
   - "Use echo to create the file, then source to execute it."
-  - "Type: `echo 'echo \"myconfig loaded\"' > myconfig.sh && . ./myconfig.sh`"
+  - "Type: `echo 'echo \"fleet_profile loaded\"' > myconfig.sh && . ./myconfig.sh`"
 -->
 ### Exercise 3: Create and source a config
-Create a file `myconfig.sh` that prints `myconfig loaded`, then source it to run it in the current shell.
+Create a file `myconfig.sh` that prints `fleet_profile loaded`, then source it to run it in the current shell.
 
 ---
 
@@ -140,21 +140,21 @@ xp: 10
 difficulty: 1
 sandbox_setup: null
 validation_type: output_contains
-expected: MY_VAR=hello
+expected: MY_VAR=UNCLASSIFIED
 hints:
   - "Export a variable and then display it."
   - "Use export to set the variable, then env or echo to show it."
-  - "Type: `export MY_VAR=hello && echo MY_VAR=$MY_VAR`"
+  - "Type: `export MY_VAR=UNCLASSIFIED && echo MY_VAR=$MY_VAR`"
 -->
 ### Exercise 4: Set and display a variable
-Set an environment variable `MY_VAR` to `hello` and print it in the format `MY_VAR=hello`.
+Set an environment variable `MY_VAR` to `UNCLASSIFIED` and print it in the format `MY_VAR=UNCLASSIFIED`.
 
 ---
 
 ## Managing Dotfiles with Git
 
-Many developers track their dotfiles in a git repository for backup and
-portability. Common approaches:
+Many administrators track their dotfiles in a git repository for backup and
+portability across fleet systems. Common approaches:
 
 ### Simple Symlink Method
 

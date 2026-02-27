@@ -78,14 +78,14 @@ xp: 10
 difficulty: 1
 sandbox_setup: null
 validation_type: output_contains
-expected: keyboard shortcuts are powerful
+expected: efficient keystrokes save time on watch
 hints:
   - "Use echo to print a message to the screen."
   - "Put the text in quotes after echo."
-  - "Type: `echo 'keyboard shortcuts are powerful'`"
+  - "Type: `echo 'efficient keystrokes save time on watch'`"
 -->
 ### Exercise 2: Practice on the command line
-Use `echo` to print the message: `keyboard shortcuts are powerful`
+Use `echo` to print the message: `efficient keystrokes save time on watch`
 
 ---
 
@@ -111,14 +111,14 @@ xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: file_exists
-expected: documents/reports/quarterly.txt
+expected: operations/reports/daily_sitrep.txt
 hints:
   - "Use mkdir -p to create the full directory path in one command."
   - "Then touch to create the file inside the nested directory."
-  - "Type: `mkdir -p documents/reports && touch documents/reports/quarterly.txt`"
+  - "Type: `mkdir -p operations/reports && touch operations/reports/daily_sitrep.txt`"
 -->
 ### Exercise 3: Create a nested structure
-Create the directory path `documents/reports/` and a file `quarterly.txt` inside it. (Hint: `mkdir -p` creates parent directories as needed.)
+Create the directory path `operations/reports/` and a file `daily_sitrep.txt` inside it. (Hint: `mkdir -p` creates parent directories as needed.)
 
 ---
 
@@ -192,8 +192,8 @@ Create an alias called `ll` that runs `ls -la`, then display all defined aliases
 
 ```bash
 echo {a,b,c}           # a b c
-mkdir dir_{01..05}      # dir_01 dir_02 dir_03 dir_04 dir_05
-touch file_{a,b,c}.txt  # file_a.txt file_b.txt file_c.txt
+mkdir patrol_{01..05}   # patrol_01 patrol_02 patrol_03 patrol_04 patrol_05
+touch log_{a,b,c}.txt   # log_a.txt log_b.txt log_c.txt
 ```
 
 **Wildcards** (globbing) match filenames:
@@ -218,14 +218,14 @@ xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: file_exists
-expected: project_03
+expected: patrol_03
 hints:
   - "Use brace expansion with mkdir to create multiple directories at once."
   - "The syntax {01..05} generates a sequence."
-  - "Type: `mkdir project_{01..05}`"
+  - "Type: `mkdir patrol_{01..05}`"
 -->
 ### Exercise 6: Brace expansion
-Create five directories named `project_01` through `project_05` using a single command with brace expansion.
+Create five directories named `patrol_01` through `patrol_05` using a single command with brace expansion.
 
 ---
 
@@ -239,7 +239,7 @@ mkdir newdir && cd newdir
 command1 ; command2
 
 # Repeat the last argument
-cat /very/long/path/to/file.conf
+cat /var/log/auth.log
 vim !$    # opens the same file in vim
 
 # Quick command substitution

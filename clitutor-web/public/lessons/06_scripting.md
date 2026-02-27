@@ -12,7 +12,7 @@ be a **shebang** that tells the system which interpreter to use:
 ```bash
 #!/bin/bash
 # This is a comment
-echo "Hello from a script!"
+echo "Systems nominal -- all watches manned"
 ```
 
 To run it:
@@ -28,19 +28,19 @@ bash myscript.sh
 
 <!-- exercise
 id: ex01
-title: Create and run a script
+title: Create and run a status check script
 xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: output_contains
-expected: Hello from my script
+expected: Systems nominal
 hints:
   - "Create a script file with a shebang, add an echo command, make it executable, and run it."
   - "Use printf or echo with redirection to write the script, then chmod +x and ./script."
-  - "Type: `printf '#!/bin/bash\\necho \"Hello from my script\"\\n' > hello.sh && chmod +x hello.sh && ./hello.sh`"
+  - "Type: `printf '#!/bin/bash\\necho \"Systems nominal\"\\n' > status_check.sh && chmod +x status_check.sh && ./status_check.sh`"
 -->
-### Exercise 1: Create and run a script
-Create a script called `hello.sh` that prints `Hello from my script`, make it executable, and run it.
+### Exercise 1: Create and run a status check script
+Create a script called `status_check.sh` that prints `Systems nominal`, make it executable, and run it.
 
 ---
 
@@ -50,8 +50,8 @@ Variables store values. No spaces around the `=` sign. Use `$VAR` or `${VAR}`
 to reference a variable:
 
 ```bash
-NAME="Alice"
-echo "Hello, $NAME"
+OPERATOR="$(whoami)"
+echo "Operator on duty: $OPERATOR"
 echo "Your home is ${HOME}"
 ```
 
@@ -73,14 +73,14 @@ xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: output_contains
-expected: "user is"
+expected: "operator is"
 hints:
   - "Create a script that assigns a variable and prints it."
   - "Use VAR=value (no spaces around =), then echo $VAR."
-  - "Type: `printf '#!/bin/bash\\nMYNAME=\"learner\"\\necho \"user is $MYNAME\"\\n' > vars.sh && bash vars.sh`"
+  - "Type: `printf '#!/bin/bash\\nOPERATOR=\"admin\"\\necho \"operator is $OPERATOR\"\\n' > vars.sh && bash vars.sh`"
 -->
 ### Exercise 2: Script with variables
-Create and run a script called `vars.sh` that sets a variable `MYNAME` and prints `user is <value>`.
+Create and run a script called `vars.sh` that sets a variable `OPERATOR` and prints `operator is <value>`.
 
 ---
 
@@ -121,10 +121,10 @@ expected: exists
 hints:
   - "Write a script that checks if a file exists using the -f test."
   - "Use if [[ -f filename ]]; then echo exists; fi."
-  - "Type: `printf '#!/bin/bash\\ntouch testfile\\nif [[ -f testfile ]]; then\\n  echo \"exists\"\\nelse\\n  echo \"missing\"\\nfi\\n' > check.sh && bash check.sh`"
+  - "Type: `printf '#!/bin/bash\\ntouch audit.log\\nif [[ -f audit.log ]]; then\\n  echo \"exists\"\\nelse\\n  echo \"missing\"\\nfi\\n' > check.sh && bash check.sh`"
 -->
 ### Exercise 3: Conditional script
-Write and run a script that creates a file called `testfile`, then checks if it exists and prints `exists` or `missing`.
+Write and run a script that creates a file called `audit.log`, then checks if it exists and prints `exists` or `missing`.
 
 ---
 
@@ -134,18 +134,18 @@ Write and run a script that creates a file called `testfile`, then checks if it 
 
 ```bash
 # Iterate over a list
-for item in apple banana cherry; do
-    echo "Fruit: $item"
+for port in 22 80 443; do
+    echo "Scanning port: $port"
 done
 
 # Iterate over files
-for f in *.txt; do
+for f in *.log; do
     echo "Processing $f"
 done
 
 # C-style loop
 for ((i=1; i<=5; i++)); do
-    echo "Number $i"
+    echo "Check $i"
 done
 ```
 
@@ -182,13 +182,13 @@ Write a for loop that prints the numbers 1, 2, and 3 (each on its own line).
 Functions group related commands and can be called by name:
 
 ```bash
-greet() {
-    local name="$1"
-    echo "Hello, $name!"
+alert() {
+    local msg="$1"
+    echo "ALERT: $msg detected"
 }
 
-greet "Alice"
-greet "Bob"
+alert "intrusion"
+alert "port scan"
 ```
 
 The `local` keyword limits a variable's scope to the function.
@@ -200,14 +200,14 @@ xp: 20
 difficulty: 3
 sandbox_setup: null
 validation_type: output_contains
-expected: "Hello, World"
+expected: "ALERT: perimeter breach"
 hints:
   - "Define a function and call it."
   - "Use function_name() { commands; } syntax."
-  - "Type: `greet() { echo \"Hello, $1\"; }; greet World`"
+  - "Type: `alert() { echo \"ALERT: $1\"; }; alert \"perimeter breach\"`"
 -->
 ### Exercise 5: Write a function
-Define a function called `greet` that takes one argument and prints `Hello, <argument>`. Call it with `World`.
+Define a function called `alert` that takes one argument and prints `ALERT: <argument>`. Call it with `perimeter breach`.
 
 ---
 
@@ -256,15 +256,15 @@ Run a command that succeeds (like `true`) and then print its exit code.
 The `read` command captures user input into a variable:
 
 ```bash
-echo "What is your name?"
-read name
-echo "Hello, $name!"
+echo "Enter incident description:"
+read incident
+echo "Logging incident: $incident"
 
 # With a prompt
-read -p "Enter your name: " name
+read -p "Enter callsign: " callsign
 
 # Silent input (for passwords)
-read -sp "Password: " pass
+read -sp "Passphrase: " pass
 ```
 
 <!-- exercise
@@ -274,14 +274,14 @@ xp: 15
 difficulty: 3
 sandbox_setup: null
 validation_type: output_contains
-expected: "You entered: test"
+expected: "Logging incident: test"
 hints:
   - "Write a script that uses read and pipe input to it."
   - "Use echo to pipe input into a script that uses read."
-  - "Type: `printf '#!/bin/bash\\nread val\\necho \"You entered: $val\"\\n' > reader.sh && echo test | bash reader.sh`"
+  - "Type: `printf '#!/bin/bash\\nread val\\necho \"Logging incident: $val\"\\n' > reader.sh && echo test | bash reader.sh`"
 -->
 ### Exercise 7: Script with read
-Create a script that reads a value and prints `You entered: <value>`. Test it by piping `test` into it.
+Create a script that reads a value and prints `Logging incident: <value>`. Test it by piping `test` into it.
 
 ---
 
@@ -291,7 +291,7 @@ Here is a practical example that combines multiple concepts:
 
 ```bash
 #!/bin/bash
-# backup.sh - Create a timestamped backup of a directory
+# backup_logs.sh - Archive and compress log files for a given directory
 
 if [[ $# -lt 1 ]]; then
     echo "Usage: $0 <directory>" >&2

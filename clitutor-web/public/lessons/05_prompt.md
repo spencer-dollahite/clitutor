@@ -4,7 +4,7 @@ The text you see to the left of your cursor in the terminal is the **prompt**.
 It typically looks something like:
 
 ```
-user@hostname:~/projects$
+operator@shipnet:~/missions$
 ```
 
 The `$` denotes a regular user. A `#` usually indicates you are **root** (the
@@ -66,7 +66,7 @@ Here are the most commonly used escape sequences:
 # Simple: user@host:path$
 PS1='\u@\h:\w\$ '
 
-# With date and time
+# With date and time (useful for logging watch activity)
 PS1='[\d \t] \u@\h:\w\$ '
 
 # Minimal

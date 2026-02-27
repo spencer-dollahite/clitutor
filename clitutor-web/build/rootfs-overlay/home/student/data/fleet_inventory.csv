@@ -1,0 +1,11 @@
+hostname,ip_address,role,os,location,status,last_patched
+shore-hq,10.0.1.10,gateway,Alpine 3.21,Building 232,active,2025-01-10
+shore-ops,10.0.1.11,webserver,Alpine 3.21,Building 232,active,2025-01-10
+shore-comms,10.0.1.12,relay,Alpine 3.21,Building 234,degraded,2024-12-15
+ddg71-cic,10.0.2.20,combat,Alpine 3.21,DDG-71 CIC,active,2025-01-05
+ddg71-eng,10.0.2.21,engineering,Alpine 3.21,DDG-71 Eng,active,2025-01-05
+cvn78-cic,10.0.2.30,combat,Alpine 3.21,CVN-78 CIC,active,2024-12-20
+cvn78-ops,10.0.2.31,operations,Alpine 3.21,CVN-78 Ops,offline,2024-11-30
+nps-dns,10.0.100.1,dns,Alpine 3.21,Glasgow Hall,active,2025-01-12
+nps-ntp,10.0.100.2,ntp,Alpine 3.21,Glasgow Hall,active,2025-01-12
+nps-monitor,10.0.100.5,monitoring,Alpine 3.21,Glasgow Hall,active,2025-01-12

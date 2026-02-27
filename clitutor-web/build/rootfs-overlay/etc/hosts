@@ -1,0 +1,18 @@
+127.0.0.1	localhost clitutor
+::1		localhost
+
+# Fleet Shore Stations
+10.0.1.10	shore-hq.fleet.mil		shore-hq
+10.0.1.11	shore-ops.fleet.mil		shore-ops
+10.0.1.12	shore-comms.fleet.mil		shore-comms
+
+# Afloat Units
+10.0.2.20	ddg71-cic.fleet.mil		ddg71-cic
+10.0.2.21	ddg71-eng.fleet.mil		ddg71-eng
+10.0.2.30	cvn78-cic.fleet.mil		cvn78-cic
+10.0.2.31	cvn78-ops.fleet.mil		cvn78-ops
+
+# Lab Infrastructure
+10.0.100.1	nps-dns.lab.mil			nps-dns
+10.0.100.2	nps-ntp.lab.mil			nps-ntp
+10.0.100.5	nps-monitor.lab.mil		nps-monitor

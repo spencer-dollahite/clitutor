@@ -9,8 +9,8 @@ administration and security.
 Run `ls -l` to see permissions in action:
 
 ```
--rw-r--r-- 1 alice dev  1234 Aug 30 12:00 notes.txt
-drwxr-xr-x 2 root  root 4096 Aug 30 12:00 bin
+-rw-r--r-- 1 student ops  1234 Aug 30 12:00 briefing.txt
+drwxr-xr-x 2 root    root 4096 Aug 30 12:00 bin
 ```
 
 The leftmost column is the **mode string**, broken down as:
@@ -74,17 +74,17 @@ title: Read permission bits
 xp: 10
 difficulty: 1
 sandbox_setup:
-  - "touch secret.txt"
-  - "chmod 640 secret.txt"
+  - "touch oporder.txt"
+  - "chmod 640 oporder.txt"
 validation_type: output_contains
 expected: rw-r-----
 hints:
   - "You need to see the detailed listing of a file to read its permissions."
   - "Use ls with the -l flag to see file metadata."
-  - "Type: `ls -l secret.txt`"
+  - "Type: `ls -l oporder.txt`"
 -->
 ### Exercise 1: Read permission bits
-Display the permissions of `secret.txt` using a long listing.
+Display the permissions of `oporder.txt` using a long listing.
 
 ---
 
@@ -94,12 +94,12 @@ You can set permissions with **octal notation** or **symbolic notation**:
 
 ```bash
 # Octal
-chmod 644 notes.txt       # rw-r--r--
-chmod 755 script.sh       # rwxr-xr-x
+chmod 644 briefing.txt    # rw-r--r--
+chmod 755 backup_logs.sh  # rwxr-xr-x
 chmod 600 private.key     # rw-------
 
 # Symbolic
-chmod u+x script.sh       # add execute for owner
+chmod u+x backup_logs.sh  # add execute for owner
 chmod g-w file.txt         # remove write from group
 chmod o=r file.txt         # set other to read-only
 chmod a-x file.txt         # remove execute from all
@@ -112,32 +112,32 @@ chmod a-x file.txt         # remove execute from all
 
 <!-- exercise
 id: ex02
-title: Make a file executable
+title: Make a script executable
 xp: 15
 difficulty: 2
 sandbox_setup:
-  - "echo '#!/bin/bash' > myscript.sh"
-  - "echo 'echo hello' >> myscript.sh"
-  - "chmod 644 myscript.sh"
+  - "echo '#!/bin/bash' > backup_logs.sh"
+  - "echo 'echo Backing up logs' >> backup_logs.sh"
+  - "chmod 644 backup_logs.sh"
 validation_type: output_contains
 expected: rwxr-xr-x
 hints:
   - "You need to set the file to be executable by everyone."
   - "Use chmod with octal 755 or symbolic u+x,g+x,o+x."
-  - "Type: `chmod 755 myscript.sh && ls -l myscript.sh`"
+  - "Type: `chmod 755 backup_logs.sh && ls -l backup_logs.sh`"
 -->
-### Exercise 2: Make a file executable
-Make `myscript.sh` executable (permissions `755`) and verify with `ls -l`.
+### Exercise 2: Make a script executable
+Make `backup_logs.sh` executable (permissions `755`) and verify with `ls -l`.
 
 ---
 
 ## `chown` and `chgrp` -- Ownership
 
 ```bash
-chown alice file.txt          # change owner to alice
-chown alice:dev file.txt      # change owner and group
-chgrp dev file.txt            # change group only
-chown -R alice:dev dir/       # recursive ownership change
+chown admin file.txt          # change owner to admin
+chown admin:ops file.txt      # change owner and group
+chgrp ops file.txt            # change group only
+chown -R admin:ops dir/       # recursive ownership change
 ```
 
 > Note: Changing ownership typically requires root/sudo privileges.
@@ -182,7 +182,7 @@ write, but you can only delete your own files.
 
 <!-- exercise
 id: ex04
-title: Create a sticky directory
+title: Create a shared watch team drop directory
 xp: 15
 difficulty: 2
 sandbox_setup: null
@@ -191,32 +191,32 @@ expected: "d.{8}[tT]"
 hints:
   - "Create a directory and set the sticky bit on it."
   - "Use mkdir then chmod 1777, then ls -ld to verify."
-  - "Type: `mkdir shared_tmp && chmod 1777 shared_tmp && ls -ld shared_tmp`"
+  - "Type: `mkdir watch_drop && chmod 1777 watch_drop && ls -ld watch_drop`"
 -->
-### Exercise 4: Create a sticky directory
-Create a directory called `shared_tmp` with sticky bit set (`1777`) and verify with `ls -ld`.
+### Exercise 4: Create a shared watch team drop directory
+Create a directory called `watch_drop` with sticky bit set (`1777`) and verify with `ls -ld`. The sticky bit ensures watch teams can only delete their own files.
 
 ---
 
 ## `ls` Field Refresher
 
 ```
--rw-r--r-- 1 alice dev 1234 Aug 30 12:00 notes.txt
+-rw-r--r-- 1 student ops 1234 Aug 30 12:00 briefing.txt
 ```
 
 | Field | Meaning |
 |-------|---------|
 | `-rw-r--r--` | mode (type + permissions) |
 | `1` | hard link count |
-| `alice` | owner (user) |
-| `dev` | group |
+| `student` | owner (user) |
+| `ops` | group |
 | `1234` | size in bytes |
 | `Aug 30 12:00` | modification time |
-| `notes.txt` | filename |
+| `briefing.txt` | filename |
 
 <!-- exercise
 id: ex05
-title: Create a private directory
+title: Create a classified working directory
 xp: 15
 difficulty: 2
 sandbox_setup: null
@@ -225,10 +225,10 @@ expected: rwx------
 hints:
   - "Use mkdir with specific permissions so only the owner has access."
   - "The -m flag lets you set permissions at creation time, or use chmod after."
-  - "Type: `mkdir -m 700 secrets && ls -ld secrets`"
+  - "Type: `mkdir -m 700 classified && ls -ld classified`"
 -->
-### Exercise 5: Create a private directory
-Create a directory called `secrets` with permissions `700` (only owner has access). Verify with `ls -ld`.
+### Exercise 5: Create a classified working directory
+Create a directory called `classified` with permissions `700` (only owner has access). Verify with `ls -ld`.
 
 ---
 
@@ -250,7 +250,7 @@ title: Remove all group and other permissions
 xp: 15
 difficulty: 2
 sandbox_setup:
-  - "echo 'private data' > private.txt"
+  - "echo 'FOUO: mission planning data' > private.txt"
   - "chmod 664 private.txt"
 validation_type: output_contains
 expected: rw-------
@@ -283,14 +283,14 @@ xp: 20
 difficulty: 2
 sandbox_setup: null
 validation_type: file_exists
-expected: project/readme.txt
+expected: mission/briefing.txt
 hints:
   - "Create the directory with 755, then create a file inside it."
   - "Use mkdir for the directory, chmod for permissions, and touch for the file."
-  - "Type: `mkdir -m 755 project && touch project/readme.txt && chmod 644 project/readme.txt`"
+  - "Type: `mkdir -m 755 mission && touch mission/briefing.txt && chmod 644 mission/briefing.txt`"
 -->
 ### Exercise 7: Permission practice pipeline
-Create a directory called `project` with permissions `755`, then create a file `readme.txt` inside it with permissions `644`.
+Create a directory called `mission` with permissions `755`, then create a file `briefing.txt` inside it with permissions `644`.
 
 ---
 

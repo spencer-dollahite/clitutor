@@ -1,0 +1,25 @@
+# Fleet Admin Quick Reference
+# Last updated: 2025-01-10
+
+## Default Credentials (CHANGE THESE!)
+# shore-hq:    admin / FleetOps2024!
+# shore-ops:   admin / FleetOps2024!
+# shore-comms: admin / CommStation99
+# monitoring:  monitor / m0n1t0r_pw
+
+## Common Tasks
+# Restart nginx:     rc-service nginx restart
+# Check SSH:         rc-service sshd status
+# View failed SSH:   grep "Failed" /var/log/auth.log
+# Tail health log:   tail -f /var/log/health.log
+# Run health check:  /usr/local/bin/health_check.sh
+
+## Known Issues
+# - shore-comms has intermittent high load (ticket #4521)
+# - cvn78-ops went offline 2025-01-15 — awaiting on-site repair
+# - nginx response time spikes during shift changes (~0800, ~1600)
+
+## Emergency Contacts
+# NOC: ext 4000
+# ISSM: ext 4100
+# After hours: duty-admin@fleet.mil

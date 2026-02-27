@@ -1,0 +1,25 @@
+Starting Nmap 7.94 ( https://nmap.org ) at 2025-01-15 10:30 UTC
+Nmap scan report for shore-hq (10.0.1.10)
+Host is up (0.0012s latency).
+
+PORT     STATE    SERVICE
+22/tcp   open     ssh
+25/tcp   filtered smtp
+80/tcp   open     http
+111/tcp  closed   rpcbind
+443/tcp  closed   https
+3306/tcp filtered mysql
+5432/tcp filtered postgresql
+8080/tcp closed   http-proxy
+8443/tcp closed   https-alt
+9090/tcp closed   zeus-admin
+
+Nmap scan report for shore-ops (10.0.1.11)
+Host is up (0.0015s latency).
+
+PORT     STATE  SERVICE
+22/tcp   open   ssh
+80/tcp   open   http
+443/tcp  closed https
+
+Nmap done: 2 IP addresses (2 hosts up) scanned in 3.42 seconds

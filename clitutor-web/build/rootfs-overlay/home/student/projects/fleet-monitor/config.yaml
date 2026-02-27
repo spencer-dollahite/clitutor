@@ -1,0 +1,44 @@
+# Fleet Monitor Configuration
+
+monitoring:
+  interval: 300  # seconds between checks
+  timeout: 5     # connection timeout
+  retries: 3
+
+thresholds:
+  load_warning: 1.5
+  load_critical: 3.0
+  disk_warning: 80
+  disk_critical: 95
+  response_time_ms: 2000
+
+hosts:
+  - name: shore-hq
+    address: 10.0.1.10
+    services: [ssh, http, monitor]
+    priority: high
+
+  - name: shore-ops
+    address: 10.0.1.11
+    services: [ssh, http]
+    priority: high
+
+  - name: shore-comms
+    address: 10.0.1.12
+    services: [ssh, http]
+    priority: medium
+
+  - name: ddg71-cic
+    address: 10.0.2.20
+    services: [ssh, http]
+    priority: high
+
+  - name: cvn78-cic
+    address: 10.0.2.30
+    services: [ssh, http, monitor]
+    priority: critical
+
+  - name: cvn78-ops
+    address: 10.0.2.31
+    services: [ssh, http]
+    priority: medium

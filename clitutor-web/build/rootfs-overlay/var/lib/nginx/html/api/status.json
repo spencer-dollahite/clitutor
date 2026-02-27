@@ -1,0 +1,17 @@
+{
+  "status": "operational",
+  "timestamp": "2025-01-15T18:45:00Z",
+  "version": "2.1.4",
+  "hosts": {
+    "shore-hq": { "status": "online", "uptime_hours": 1092, "load": 0.42, "services": ["sshd", "nginx", "monitor"] },
+    "shore-ops": { "status": "online", "uptime_hours": 1092, "load": 0.78, "services": ["sshd", "nginx"] },
+    "shore-comms": { "status": "degraded", "uptime_hours": 291, "load": 1.82, "services": ["sshd"] },
+    "ddg71-cic": { "status": "online", "uptime_hours": 2143, "load": 0.31, "services": ["sshd", "nginx"] },
+    "cvn78-cic": { "status": "online", "uptime_hours": 2881, "load": 0.55, "services": ["sshd", "nginx", "monitor"] },
+    "cvn78-ops": { "status": "offline", "uptime_hours": 0, "load": null, "services": [] }
+  },
+  "alerts": [
+    { "level": "warning", "host": "shore-comms", "message": "High load average: 1.82" },
+    { "level": "critical", "host": "cvn78-ops", "message": "Host unreachable since 2025-01-15T06:00:00Z" }
+  ]
+}

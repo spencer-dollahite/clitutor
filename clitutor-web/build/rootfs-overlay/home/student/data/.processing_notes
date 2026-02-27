@@ -1,0 +1,12 @@
+# Data Processing Notes
+#
+# Source: Fleet monitoring infrastructure exports
+# Collected: 2025-01-15
+# Sanitized: IP addresses use RFC 5737 test ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24)
+# Internal IPs: 10.0.0.0/8 range (real fleet addresses redacted)
+#
+# Files:
+#   access_log.csv    - Exported from nginx access.log, reformatted as CSV
+#   fleet_inventory.csv - From CMDB export, filtered to lab-relevant hosts
+#   auth_attempts.log - Simplified auth log format for analysis exercises
+#   ports_scan.txt    - Sample nmap output for port analysis exercises

@@ -1,0 +1,15 @@
+2025-01-15 00:05:00 [OK] sshd: running (pid 892)
+2025-01-15 00:05:00 [OK] nginx: running (pid 901)
+2025-01-15 00:05:00 [OK] disk: 42% used
+2025-01-15 00:10:00 [OK] sshd: running (pid 892)
+2025-01-15 00:10:00 [OK] nginx: running (pid 901)
+2025-01-15 00:10:00 [OK] disk: 42% used
+2025-01-15 00:15:00 [WARN] load: 1.82 (threshold 1.5)
+2025-01-15 00:15:00 [OK] sshd: running (pid 892)
+2025-01-15 00:15:00 [OK] nginx: running (pid 901)
+2025-01-15 00:20:00 [OK] sshd: running (pid 892)
+2025-01-15 00:20:00 [OK] nginx: running (pid 901)
+2025-01-15 00:20:00 [OK] disk: 43% used
+2025-01-15 00:25:00 [WARN] nginx: response_time 2340ms (threshold 2000ms)
+2025-01-15 00:25:00 [OK] sshd: running (pid 892)
+2025-01-15 00:30:00 [OK] sshd: running (pid 892)

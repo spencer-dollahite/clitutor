@@ -1,0 +1,7 @@
+Raw binary data files - DO NOT cat these directly!
+
+Use 'xxd' or 'hexdump -C' to inspect binary content.
+Use 'file' command to identify file types.
+
+Files:
+  sample.bin - 256 bytes of random data for hex analysis exercises
