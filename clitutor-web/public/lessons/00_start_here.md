@@ -87,41 +87,46 @@ difficulty: 1
 sandbox_setup:
   - "mkdir -p missions/operation-typhoon"
 validation_type: cwd_regex
-expected: "/(operations|missions|operation-typhoon|intel|a)(/|$)"
+expected: "^/home/student/.+"
 hints:
   - "You need to change into a subdirectory. Use ls to see what's available."
   - "Use cd followed by the directory name."
   - "Type: `cd missions`"
 -->
 ### Exercise 3: Change to a subdirectory
-Change into any subdirectory (use `ls` to see what's available).
+You're currently in your home directory (`/home/student`). Use `ls` to see the
+available subdirectories, then `cd` into one of them.
 
 ---
 
-## Going Back -- `cd -` and `cd ..`
+## Going Back -- `cd`, `cd -`, `cd ..`
 
 You can return to the previous directory with `cd -` (toggles between your last
 two locations). You can go up one level with `cd ..`, or up two levels with
 `cd ../..`, and so on.
 
-`cd` by itself (or `cd ~`) takes you straight to your home directory.
+**`cd` by itself (or `cd ~`) takes you straight to your home directory.** This
+is one of the most useful things to remember -- no matter how deep into the
+filesystem you've wandered, `cd` with no arguments brings you back home.
 
 <!-- exercise
 id: ex04
-title: Confirm your location
+title: Return to your home directory
 xp: 10
 difficulty: 1
 sandbox_setup:
   - "mkdir -p a/b/c"
-validation_type: output_regex
-expected: "^/"
+validation_type: cwd_regex
+expected: "^/home/student$"
 hints:
-  - "You need to confirm your current directory."
-  - "The command to print your working directory is three letters."
-  - "Type exactly: `pwd`"
+  - "You need to get back to your home directory. What command takes you there with no arguments?"
+  - "Type cd by itself (no arguments) to return to your home directory."
+  - "Type exactly: `cd`"
 -->
-### Exercise 4: Confirm your location
-Print your current working directory to confirm where you are.
+### Exercise 4: Return to your home directory
+You should still be inside a subdirectory from the previous exercise. Use `cd`
+with no arguments to return to your home directory (`/home/student`). You can
+verify with `pwd` afterward.
 
 ---
 
@@ -146,6 +151,9 @@ hints:
   - "Type exactly: `ls -a`"
 -->
 ### Exercise 5: Show hidden files
+You should be in your home directory (`/home/student`). If you're not, run `cd`
+to return there first.
+
 List all files in the current directory, including hidden ones.
 
 ---
@@ -178,7 +186,8 @@ hints:
   - "Type exactly: `ls -l`"
 -->
 ### Exercise 6: Long listing
-Display a detailed (long) listing of the current directory.
+You should still be in your home directory. Display a detailed (long) listing of
+the current directory.
 
 ---
 
@@ -199,21 +208,26 @@ Display a detailed (long) listing of the current directory.
 
 <!-- exercise
 id: ex07
-title: Create a directory for mission briefs with a file inside
+title: Create a mission briefs directory with a file inside
 xp: 15
 difficulty: 1
 sandbox_setup: null
-validation_type: dir_with_file
-expected: ""
+validation_type: file_exists
+expected: "briefs/oporder.txt"
 hints:
   - "You need to create a directory first, then create a file inside it."
   - "Use mkdir for the directory and touch for the file."
-  - "Example: `mkdir briefs && touch briefs/oporder.txt`"
+  - "Type: `mkdir briefs && touch briefs/oporder.txt`"
 -->
-### Exercise 7: Create a directory for mission briefs with a file inside
-First, create a new directory using `mkdir`. Then, create an empty file **inside
-that new directory** using `touch`. You can pick any names you like
-(for example, `mkdir briefs && touch briefs/oporder.txt`).
+### Exercise 7: Create a mission briefs directory with a file inside
+Make sure you are in your home directory (`cd` to return if needed).
+
+Create a directory called `briefs`, then create an empty file called `oporder.txt`
+**inside** it using `touch`:
+
+```
+mkdir briefs && touch briefs/oporder.txt
+```
 
 ---
 
@@ -250,6 +264,8 @@ hints:
   - "Example: `echo 'Today I learned the CLI' > journal.txt`"
 -->
 ### Exercise 8: Write and read a file
+You should still be in your home directory.
+
 Use `echo` and redirection to create a file containing the text `Today I learned the CLI`.
 You can name the file anything you like (for example, `journal.txt`).
 
