@@ -208,26 +208,23 @@ the current directory.
 
 <!-- exercise
 id: ex07
-title: Create a mission briefs directory with a file inside
+title: Create a directory with a file inside and verify
 xp: 15
 difficulty: 1
 sandbox_setup: null
-validation_type: file_exists
-expected: "briefs/oporder.txt"
+validation_type: output_contains
+expected: oporder.txt
 hints:
-  - "You need to create a directory first, then create a file inside it."
-  - "Use mkdir for the directory and touch for the file."
-  - "Type: `mkdir briefs && touch briefs/oporder.txt`"
+  - "First create the directory with mkdir, then the file with touch, then list it with ls."
+  - "Use mkdir for the directory, touch for the file, and ls to verify."
+  - "Type: `mkdir briefs`, then `touch briefs/oporder.txt`, then `ls briefs/`"
 -->
-### Exercise 7: Create a mission briefs directory with a file inside
+### Exercise 7: Create a directory with a file inside and verify
 Make sure you are in your home directory (`cd` to return if needed).
 
-Create a directory called `briefs`, then create an empty file called `oporder.txt`
-**inside** it using `touch`:
-
-```
-mkdir briefs && touch briefs/oporder.txt
-```
+1. Create a directory called `briefs` using `mkdir`
+2. Create an empty file called `oporder.txt` inside it using `touch`
+3. Verify your work by listing the contents: `ls briefs/`
 
 ---
 
@@ -256,18 +253,19 @@ title: Write and read a file
 xp: 20
 difficulty: 1
 sandbox_setup: null
-validation_type: any_file_contains
+validation_type: output_contains
 expected: Today I learned the CLI
 hints:
-  - "Use echo with redirection to write text into a file."
-  - "The > operator sends output to a file. Put your text in quotes."
-  - "Example: `echo 'Today I learned the CLI' > journal.txt`"
+  - "Use echo with redirection to write text into a file, then cat to read it."
+  - "The > operator sends output to a file. Then use cat to display it."
+  - "Type: `echo 'Today I learned the CLI' > journal.txt` then `cat journal.txt`"
 -->
 ### Exercise 8: Write and read a file
 You should still be in your home directory.
 
-Use `echo` and redirection to create a file containing the text `Today I learned the CLI`.
-You can name the file anything you like (for example, `journal.txt`).
+1. Use `echo` and redirection (`>`) to create a file containing the text
+   `Today I learned the CLI` (for example, `echo 'Today I learned the CLI' > journal.txt`)
+2. Read the file back with `cat` to verify (for example, `cat journal.txt`)
 
 ---
 
