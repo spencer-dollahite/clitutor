@@ -38,7 +38,15 @@ declare class V86 {
   v86: {
     cpu: {
       devices: {
-        virtio_9p?: { get_file_list(): string[] };
+        virtio_9p?: {
+          /** The host-side 9p filesystem object (internal v86 API). */
+          fs: {
+            SearchPath(path: string): { id: number; parentid: number; name: string };
+            Search(parentid: number, name: string): number;
+            IsDirectory(id: number): boolean;
+            inodes: Array<{ mode: number; direntries: Map<string, number> }>;
+          };
+        };
       };
     };
   };

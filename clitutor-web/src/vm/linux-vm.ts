@@ -248,33 +248,100 @@ export class LinuxVM {
   }
 
   /**
-   * Run a command via serial and read result from a temp file.
-   * Used for filesystem validation checks (not for interactive commands).
+   * Access v86's internal 9p filesystem object.
+   * This is the host-side inode tree — updated in real-time as the guest
+   * creates/deletes files via 9p protocol messages.  No cache issues,
+   * no serial commands, no timing.
    */
-  async execCommand(cmd: string): Promise<string> {
-    const tag = `_ct_${Date.now()}`;
-    const outFile = `/tmp/${tag}`;
-
-    this.sendSerial(`${cmd} > ${outFile} 2>&1\n`);
-    await new Promise((r) => setTimeout(r, 500));
-    const result = await this.readFile(outFile);
-    this.sendSerial(`rm -f ${outFile}\n`);
-    return result;
+  private get9pFs(): any {
+    return (this.emulator?.v86?.cpu?.devices?.virtio_9p as any)?.fs ?? null;
   }
 
+  /**
+   * Check if any immediate subdirectory of `root` contains a regular file.
+   * Walks v86's host-side 9p inode tree directly (2 levels deep).
+   *
+   * Example: root=/home/student, user runs `mkdir foo && touch foo/bar`
+   *   → finds inode for /home/student
+   *   → iterates direntries: finds "foo" (directory)
+   *   → iterates foo's direntries: finds "bar" (regular file) → true
+   */
   async hasDirWithFile(root: string): Promise<boolean> {
-    const result = await this.execCommand(
-      `find ${root} -mindepth 2 -maxdepth 2 -type f 2>/dev/null | head -1`,
-    );
-    return result.trim().length > 0;
+    const fs = this.get9pFs();
+    if (!fs) return false;
+
+    const rootResult = fs.SearchPath(root);
+    if (!rootResult || rootResult.id === -1) return false;
+
+    const rootInode = fs.inodes[rootResult.id];
+    if (!rootInode?.direntries) return false;
+
+    // Level 1: immediate children of root — look for directories
+    for (const [name, childId] of rootInode.direntries) {
+      if (name === "." || name === "..") continue;
+      const childMode = fs.inodes[childId]?.mode ?? 0;
+      if ((childMode & 0xF000) !== 0x4000) continue; // S_IFDIR = 0x4000
+
+      // Level 2: entries inside the subdirectory — look for regular files
+      const childInode = fs.inodes[childId];
+      if (!childInode?.direntries) continue;
+      for (const [entryName, entryId] of childInode.direntries) {
+        if (entryName === "." || entryName === "..") continue;
+        const entryMode = fs.inodes[entryId]?.mode ?? 0;
+        if ((entryMode & 0xF000) === 0x8000) return true; // S_IFREG = 0x8000
+      }
+    }
+    return false;
   }
 
+  /**
+   * Check if any file under `root` (recursively) contains the given text.
+   * Walks v86's host-side 9p inode tree and reads file contents via
+   * emulator.read_file().
+   */
   async findFileContaining(root: string, text: string): Promise<boolean> {
-    const escaped = text.replace(/'/g, "'\\''");
-    const result = await this.execCommand(
-      `grep -rl '${escaped}' ${root} 2>/dev/null | head -1`,
-    );
-    return result.trim().length > 0;
+    if (!this.emulator) return false;
+    const fs = this.get9pFs();
+    if (!fs) return false;
+
+    const rootResult = fs.SearchPath(root);
+    if (!rootResult || rootResult.id === -1) return false;
+
+    return this.searchTreeForContent(fs, rootResult.id, root, text);
+  }
+
+  /**
+   * Recursively search the 9p inode tree for a regular file containing `text`.
+   */
+  private async searchTreeForContent(
+    fs: any, dirId: number, dirPath: string, text: string,
+  ): Promise<boolean> {
+    const inode = fs.inodes[dirId];
+    if (!inode?.direntries) return false;
+
+    for (const [name, childId] of inode.direntries) {
+      if (name === "." || name === "..") continue;
+      const childPath = dirPath + "/" + name;
+      const childMode = fs.inodes[childId]?.mode ?? 0;
+      const fileType = childMode & 0xF000;
+
+      if (fileType === 0x8000) {
+        // Regular file — read and check content
+        try {
+          const data = await this.emulator!.read_file(childPath);
+          const content = new TextDecoder().decode(data);
+          if (content.includes(text)) return true;
+        } catch {
+          // Unreadable — skip
+        }
+      } else if (fileType === 0x4000) {
+        // Directory — recurse
+        if (await this.searchTreeForContent(fs, childId, childPath, text)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   // ── State management ──────────────────────────────────────────────

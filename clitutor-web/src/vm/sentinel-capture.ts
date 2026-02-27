@@ -37,6 +37,24 @@ export class SentinelCapture {
   private pendingMessages: string[] = [];
   private displayQueue: string[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private partialBuffer = "";
+  private partialTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * When true, serial display output is suppressed (old prompt bytes still in
+   * the serial pipeline are hidden).  Cleared when the next CMD_START sentinel
+   * arrives, signalling the start of a fresh prompt cycle.
+   *
+   * System messages (via displayQueue / flushDisplayQueue) bypass this flag
+   * because they write through a separate path.
+   */
+  private muteSerial = false;
+
+  /**
+   * Resolve function for waitForCommand().  Set when a caller is waiting for
+   * the next CMD_END sentinel to signal shell command completion.
+   */
+  private commandWaiter: (() => void) | null = null;
 
   onCommand: CommandCallback | null = null;
   onDisplay: DisplayCallback | null = null;
@@ -66,6 +84,16 @@ export class SentinelCapture {
     // prompt ANSI sequences mid-parse in xterm.js.
     this.flushDisplayQueue();
 
+    // Prepend any buffered partial sentinel from a previous call
+    if (this.partialBuffer) {
+      data = this.partialBuffer + data;
+      this.partialBuffer = "";
+    }
+    if (this.partialTimer) {
+      clearTimeout(this.partialTimer);
+      this.partialTimer = null;
+    }
+
     const displayParts: string[] = [];
     const pendingResults: CommandResult[] = [];
     let lastEnd = 0;
@@ -79,14 +107,25 @@ export class SentinelCapture {
         if (this.capturing) {
           this.capturedChunks.push(segment);
         }
-        displayParts.push(segment);
+        // When muteSerial is active, suppress stale serial display bytes
+        // (old prompt remnants still in the pipeline). Capture data is
+        // unaffected so the sentinel state machine stays consistent.
+        if (!this.muteSerial) {
+          displayParts.push(segment);
+        }
       }
 
       // Handle the sentinel
       const sentinelBody = match[1];
-      console.log("[SentinelCapture] processOutput: sentinel=%s capturing=%s skipCaptures=%d ready=%s",
-        sentinelBody.slice(0, 60), this.capturing, this.skipCaptures, this.ready);
+      console.log("[SentinelCapture] processOutput: sentinel=%s capturing=%s skipCaptures=%d ready=%s muteSerial=%s",
+        sentinelBody.slice(0, 60), this.capturing, this.skipCaptures, this.ready, this.muteSerial);
       if (sentinelBody === CMD_START_SENTINEL) {
+        // CMD_START marks the beginning of a fresh prompt cycle.
+        // Clear muteSerial so the new PS1 prompt renders normally.
+        if (this.muteSerial) {
+          this.muteSerial = false;
+          console.log("[SentinelCapture] CMD_START: cleared muteSerial");
+        }
         this.capturing = true;
         this.capturedChunks = [];
       } else if (sentinelBody.startsWith(CMD_END_SENTINEL + ":")) {
@@ -102,13 +141,35 @@ export class SentinelCapture {
       lastEnd = match.index + match[0].length;
     }
 
-    // Data after the last sentinel
+    // Data after the last sentinel — check for a partial sentinel split
+    // across serial chunks. \x1f only appears as a sentinel delimiter, so
+    // any trailing \x1f means a sentinel started but didn't finish yet.
     const tail = data.slice(lastEnd);
     if (tail) {
-      if (this.capturing) {
-        this.capturedChunks.push(tail);
+      const sentIdx = tail.indexOf(SENTINEL_CHAR);
+      if (sentIdx !== -1) {
+        // Text before the \x1f is safe to display/capture
+        const safe = tail.slice(0, sentIdx);
+        if (safe) {
+          if (this.capturing) this.capturedChunks.push(safe);
+          if (!this.muteSerial) displayParts.push(safe);
+        }
+        // Buffer from \x1f onward for next processOutput call
+        this.partialBuffer = tail.slice(sentIdx);
+        // Safety: flush after 50ms if no more data arrives (not a real sentinel)
+        this.partialTimer = setTimeout(() => {
+          this.partialTimer = null;
+          if (this.partialBuffer) {
+            const buf = this.partialBuffer;
+            this.partialBuffer = "";
+            if (this.capturing) this.capturedChunks.push(buf);
+            if (!this.muteSerial) this.onDisplay?.(buf);
+          }
+        }, 50);
+      } else {
+        if (this.capturing) this.capturedChunks.push(tail);
+        if (!this.muteSerial) displayParts.push(tail);
       }
-      displayParts.push(tail);
     }
 
     // Display text FIRST — ensures the prompt is written to the terminal
@@ -139,6 +200,15 @@ export class SentinelCapture {
 
     console.log("[SentinelCapture] finishCapture: exitCode=%d skipCaptures=%d rawChunks=%d ready=%s",
       exitCode, this.skipCaptures, rawChunks.length, this.ready);
+
+    // Resolve any pending waitForCommand() caller.  This fires for every
+    // CMD_END — both skipped (internal) and real commands — which is correct
+    // because the waiter just needs to know the shell finished *something*.
+    if (this.commandWaiter) {
+      const resolve = this.commandWaiter;
+      this.commandWaiter = null;
+      resolve();
+    }
 
     // Skip internal captures (bash startup)
     if (this.skipCaptures > 0) {
@@ -214,6 +284,37 @@ export class SentinelCapture {
     this.onDisplay?.(batch);
   }
 
+  /**
+   * Suppress serial display output until the next CMD_START sentinel.
+   *
+   * After validation fires system messages (which use \r\x1b[K to overwrite
+   * the current terminal line), old prompt bytes may still be in the serial
+   * pipeline.  This flag prevents those stale bytes from rendering.
+   *
+   * The flag is cleared deterministically when CMD_START is processed — no
+   * timers, no guessing.  System messages (displayQueue) are unaffected
+   * because they write through flushDisplayQueue, not through displayParts.
+   */
+  muteUntilNextPrompt(): void {
+    this.muteSerial = true;
+    console.log("[SentinelCapture] muteUntilNextPrompt: muteSerial=true");
+  }
+
+  /**
+   * Returns a Promise that resolves when the next CMD_END sentinel is
+   * processed by finishCapture.  Used to wait for shell command completion
+   * (e.g. seed scripts) without hardcoded timers.
+   *
+   * The sentinel state machine itself signals completion — deterministic,
+   * not timing-based.  If the command never completes (VM hung), the
+   * Promise never resolves; callers can race with a timeout if needed.
+   */
+  waitForCommand(): Promise<void> {
+    return new Promise((resolve) => {
+      this.commandWaiter = resolve;
+    });
+  }
+
   /** Increment skip counter (e.g., for empty commands from slash command handling). */
   skipNextCapture(): void {
     this.skipCaptures++;
@@ -227,11 +328,18 @@ export class SentinelCapture {
     this.capturedChunks = [];
     this.skipCaptures = 1;
     this.ready = false;
+    this.muteSerial = false;
+    this.commandWaiter = null;
     this.pendingMessages = [];
     this.displayQueue = [];
+    this.partialBuffer = "";
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
+    }
+    if (this.partialTimer) {
+      clearTimeout(this.partialTimer);
+      this.partialTimer = null;
     }
   }
 }

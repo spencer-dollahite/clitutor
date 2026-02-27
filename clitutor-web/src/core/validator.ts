@@ -113,10 +113,15 @@ export class OutputValidator {
   }
 
   private async checkDirWithFile(cwd: string): Promise<ValidationResult> {
-    // List files in sandbox root, look for any directory containing a file
+    // Search from both sandbox root and cwd (user may be in a subdirectory)
     const sandboxRoot = "/home/student";
     if (await this.vm.hasDirWithFile(sandboxRoot)) {
       return ok("Correct! Directory with file created.");
+    }
+    if (cwd && cwd !== sandboxRoot) {
+      if (await this.vm.hasDirWithFile(cwd)) {
+        return ok("Correct! Directory with file created.");
+      }
     }
     return fail(
       "No directory containing a file was found. " +
