@@ -35,6 +35,7 @@ marked.use(highlightExtension);
 
 export class MarkdownPane {
   private container: HTMLElement;
+  private exerciseHeadings = new Map<number, HTMLHeadingElement>();
 
   constructor(parent: HTMLElement) {
     this.container = document.createElement("div");
@@ -44,25 +45,41 @@ export class MarkdownPane {
 
   render(markdown: string): void {
     this.container.innerHTML = marked.parse(markdown) as string;
+    this.indexExerciseHeadings();
   }
 
   /** Scroll to a specific exercise heading by exercise number. */
   scrollToExercise(exerciseNum: number): void {
-    const headings = this.container.querySelectorAll("h3");
-    for (const h of headings) {
-      if (h.textContent?.toLowerCase().includes(`exercise ${exerciseNum}`) ||
-          h.textContent?.toLowerCase().includes(`exercise: `)) {
-        h.scrollIntoView({ behavior: "smooth", block: "start" });
-        // Brief highlight effect
-        h.style.color = "var(--accent)";
-        setTimeout(() => { h.style.color = ""; }, 2000);
-        return;
-      }
-    }
+    const heading =
+      this.exerciseHeadings.get(exerciseNum) ??
+      // Fallback: if labels are malformed, use exercise order.
+      Array.from(this.exerciseHeadings.values())[exerciseNum - 1];
+    if (!heading) return;
+
+    heading.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Brief highlight effect
+    heading.style.color = "var(--accent)";
+    setTimeout(() => { heading.style.color = ""; }, 2000);
   }
 
   /** Scroll to top. */
   scrollToTop(): void {
     this.container.scrollTop = 0;
+  }
+
+  /** Build an exact mapping from "Exercise N" headings to DOM nodes. */
+  private indexExerciseHeadings(): void {
+    this.exerciseHeadings.clear();
+    const headings = this.container.querySelectorAll("h3");
+    for (const h of headings) {
+      const text = h.textContent ?? "";
+      const m = text.match(/\bexercise\s+(\d+)\b/i);
+      if (!m) continue;
+      const num = parseInt(m[1], 10);
+      if (!Number.isFinite(num)) continue;
+      if (!this.exerciseHeadings.has(num)) {
+        this.exerciseHeadings.set(num, h as HTMLHeadingElement);
+      }
+    }
   }
 }

@@ -8,6 +8,7 @@ code. Every developer and sysadmin should know git basics.
 
 ```bash
 git init                  # create a new git repo in the current directory
+git init -b main          # create repo with main as default branch
 git init my-project       # create a new repo in a new directory
 ```
 
@@ -23,11 +24,11 @@ validation_type: output_contains
 expected: Initialized
 hints:
   - "Use the git command that creates a new repository."
-  - "The subcommand is 'init'."
-  - "Type: `git init myrepo`"
+  - "Use -b main so later branch/merge steps are consistent."
+  - "Type: `git init -b main myrepo`"
 -->
 ### Exercise 1: Initialize a git repository
-Create a new git repository called `myrepo`.
+Create a new git repository called `myrepo` with `main` as the default branch.
 
 ---
 
@@ -57,8 +58,7 @@ id: ex02
 title: Add and check status
 xp: 15
 difficulty: 2
-sandbox_setup:
-  - "git init myrepo"
+sandbox_setup: null
 validation_type: output_contains
 expected: new file
 hints:
@@ -89,15 +89,13 @@ id: ex03
 title: Make your first commit
 xp: 20
 difficulty: 2
-sandbox_setup:
-  - "git init myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md"
+sandbox_setup: null
 validation_type: output_contains
 expected: "initial commit"
 hints:
-  - "Use git commit with the -m flag to provide a message."
-  - "The message should be in quotes after -m."
-  - "Type: `cd myrepo && git commit -m 'initial commit'`"
+  - "Git requires identity for commits: set user.name and user.email first."
+  - "Then commit with -m and the exact message."
+  - "Type: `git config user.name student && git config user.email student@clitutor && git commit -m 'initial commit'`"
 -->
 ### Exercise 3: Make your first commit
 Commit the staged `README.md` with the message `initial commit`.
@@ -119,15 +117,13 @@ id: ex04
 title: View the log
 xp: 10
 difficulty: 2
-sandbox_setup:
-  - "git init myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
+sandbox_setup: null
 validation_type: output_contains
 expected: initial commit
 hints:
   - "Use the git command that shows commit history."
   - "The subcommand is 'log'."
-  - "Type: `cd myrepo && git log --oneline`"
+  - "Type: `git log --oneline`"
 -->
 ### Exercise 4: View the log
 View the commit history of `myrepo` in one-line format.
@@ -152,15 +148,13 @@ id: ex05
 title: Create and switch to a branch
 xp: 15
 difficulty: 3
-sandbox_setup:
-  - "git init myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
+sandbox_setup: null
 validation_type: output_contains
 expected: feature
 hints:
   - "Use git checkout -b or git switch -c to create and switch to a new branch."
   - "Then verify with git branch to see the current branch."
-  - "Type: `cd myrepo && git checkout -b feature && git branch`"
+  - "Type: `git checkout -b feature && git branch`"
 -->
 ### Exercise 5: Create and switch to a branch
 In `myrepo`, create a new branch called `feature` and switch to it. List branches to verify.
@@ -189,20 +183,16 @@ id: ex06
 title: Merge a branch
 xp: 20
 difficulty: 3
-sandbox_setup:
-  - "git init -b main myrepo"
-  - "cd myrepo && git config user.name student && git config user.email student@clitutor && touch README.md && git add README.md && git commit -m 'initial commit'"
-  - "cd myrepo && git checkout -b feature"
-  - "cd myrepo && echo 'new feature' > feature.txt && git add feature.txt && git commit -m 'add feature'"
+sandbox_setup: null
 validation_type: output_contains
 expected: feature.txt
 hints:
-  - "Switch back to the main branch and merge the feature branch."
-  - "Use git checkout then git merge."
-  - "Type: `cd myrepo && git checkout main && git merge feature && ls`"
+  - "Create a file on feature, commit it, then merge back to main."
+  - "Use git add + git commit, then checkout main and git merge."
+  - "Type: `echo 'new feature' > feature.txt && git add feature.txt && git commit -m 'add feature' && git checkout main && git merge feature && ls`"
 -->
 ### Exercise 6: Merge a branch
-Switch back to the main branch in `myrepo` and merge the `feature` branch. List files to confirm.
+On `feature`, create and commit `feature.txt`, then switch back to `main` and merge the branch. List files to confirm.
 
 ---
 
@@ -224,14 +214,13 @@ id: ex07
 title: Configure git user
 xp: 10
 difficulty: 2
-sandbox_setup:
-  - "git init myrepo"
+sandbox_setup: null
 validation_type: output_contains
 expected: learner
 hints:
   - "Set your git user name using git config."
   - "The command is git config user.name followed by the name in quotes."
-  - "Type: `cd myrepo && git config user.name 'learner' && git config user.name`"
+  - "Type: `git config user.name 'learner' && git config user.name`"
 -->
 ### Exercise 7: Configure git user
 Set the git user name to `learner` in the `myrepo` repository and verify it.
@@ -259,14 +248,13 @@ id: ex08
 title: Create a .gitignore
 xp: 15
 difficulty: 2
-sandbox_setup:
-  - "git init myrepo"
+sandbox_setup: null
 validation_type: file_contains
-expected: myrepo/.gitignore::*.log
+expected: .gitignore::*.log
 hints:
   - "Create a .gitignore file with patterns for files to ignore."
   - "Use echo or printf with redirection."
-  - "Type: `printf '*.log\\n*.tmp\\nnode_modules/\\n' > myrepo/.gitignore`"
+  - "Type: `printf '*.log\\n*.tmp\\nnode_modules/\\n' > .gitignore`"
 -->
 ### Exercise 8: Create a .gitignore
 Create a `.gitignore` file in `myrepo` that ignores `*.log` and `*.tmp` files and the `node_modules/` directory.
