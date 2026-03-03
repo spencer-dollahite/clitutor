@@ -713,8 +713,11 @@ export class App {
     meta: LessonMeta,
     preloaded?: LessonData,
   ): Promise<void> {
-    const lesson = preloaded ?? await this.loader.loadLesson(meta);
-    this.currentLesson = lesson;
+    const priorDeferSizeSync = this.deferTerminalSizeSync;
+    this.deferTerminalSizeSync = true;
+    try {
+      const lesson = preloaded ?? await this.loader.loadLesson(meta);
+      this.currentLesson = lesson;
 
     // Restore progress — currentExercise advances past completed exercises.
     // When all are done, currentExercise = length which the exercise bar
@@ -760,12 +763,18 @@ export class App {
       this.sentinel.queueSystemMessage("All exercises complete!");
     }
 
-    // Trigger fresh prompt after messages — mute stale serial bytes until
-    // the kicked \n produces CMD_START for the fresh prompt.
-    console.log("[openLessonByMeta] refreshPrompt");
-    await this.refreshPrompt("open-lesson");
+      // Trigger fresh prompt after messages — mute stale serial bytes until
+      // the kicked \n produces CMD_START for the fresh prompt.
+      // Wait for sidebar refit (scheduled at 350ms) so any pending terminal
+      // resize sync can be coalesced into this single prompt-refresh command.
+      await new Promise<void>((resolve) => setTimeout(resolve, 380));
+      console.log("[openLessonByMeta] refreshPrompt");
+      await this.refreshPrompt("open-lesson");
 
-    this.terminalPane?.focus();
+      this.terminalPane?.focus();
+    } finally {
+      this.deferTerminalSizeSync = priorDeferSizeSync;
+    }
   }
 
   private showLessonContent(): void {

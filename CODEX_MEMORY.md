@@ -40,6 +40,9 @@
   next prompt indefinitely.
 - Removed eager post-boot terminal-size sync; first size sync is deferred until
   lesson layout stabilizes to avoid transient-width `stty` churn at startup.
+- Lesson-open flow now defers execution of terminal-size sync through sidebar
+  settle (~380ms) so the pending resize sync is consumed by the same
+  `refreshPrompt("open-lesson")` command, preventing a second startup prompt.
 
 ## Local Dev
 - Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`
