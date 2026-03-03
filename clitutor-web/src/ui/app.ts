@@ -46,6 +46,10 @@ export class App {
   private sizeSyncTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingCols: number | null = null;
   private pendingRows: number | null = null;
+  private lastSyncedCols: number | null = null;
+  private lastSyncedRows: number | null = null;
+  private deferTerminalSizeSync = false;
+  private promptRefreshInFlight = false;
   private static readonly TERM_DEBUG_KEY = "clitutor-debug-terminal";
 
   // DOM refs
@@ -101,6 +105,8 @@ export class App {
     // Reset sentinel state so stale ready/skipCaptures/capturing
     // from a previous lesson don't carry over
     this.sentinel.reset();
+    // Coalesce startup maintenance commands into one prompt cycle.
+    this.deferTerminalSizeSync = true;
 
     // Render terminal layout
     this.renderLayout();
@@ -135,6 +141,7 @@ export class App {
     // Set up lesson UI (pass pre-loaded lesson to skip re-seeding).
     // openLessonByMeta sends a prompt-kick (\n) so we don't need another here.
     await this.openLessonByMeta(meta, lesson);
+    this.deferTerminalSizeSync = false;
   }
 
   private backToPicker(): void {
@@ -156,6 +163,9 @@ export class App {
     }
     this.pendingCols = null;
     this.pendingRows = null;
+    this.lastSyncedCols = null;
+    this.lastSyncedRows = null;
+    this.deferTerminalSizeSync = false;
 
     // Destroy terminal layout
     this.terminalPane = null;
@@ -401,6 +411,38 @@ export class App {
     this.markdownPane?.scrollToExercise(this.currentExercise + 1);
   }
 
+  /** Trigger exactly one internal prompt refresh at a time. */
+  private async refreshPrompt(reason: string): Promise<void> {
+    if (!this.vm || !this.sentinel.isReady) return;
+    if (this.promptRefreshInFlight) {
+      console.log("[prompt-refresh] skip (already in flight): %s", reason);
+      return;
+    }
+    this.promptRefreshInFlight = true;
+    console.log("[prompt-refresh] start: %s", reason);
+    this.sentinel.muteUntilNextPrompt();
+    this.sentinel.skipNextCapture();
+    const sizeSync = this.consumePendingSizeSync();
+    if (sizeSync) {
+      this.lastSyncedCols = sizeSync.cols;
+      this.lastSyncedRows = sizeSync.rows;
+      this.vm.sendSerial(
+        ` stty rows ${sizeSync.rows} cols ${sizeSync.cols} >/dev/null 2>&1; export LINES=${sizeSync.rows} COLUMNS=${sizeSync.cols}\n`,
+      );
+    } else {
+      this.vm.sendSerial("\n");
+    }
+    try {
+      await Promise.race([
+        this.sentinel.waitForCommand(),
+        new Promise<void>((resolve) => setTimeout(resolve, 1200)),
+      ]);
+    } finally {
+      this.promptRefreshInFlight = false;
+      console.log("[prompt-refresh] done: %s", reason);
+    }
+  }
+
   // ── Command handling ──────────────────────────────────────────────
 
   private async handleCommand(result: CommandResult): Promise<void> {
@@ -515,8 +557,7 @@ export class App {
     }
 
     // Kick a fresh prompt so the user sees a usable prompt below system messages.
-    this.sentinel.skipNextCapture();
-    this.vm?.sendSerial('\n');
+    await this.refreshPrompt("exercise-validation");
   }
 
   // ── Slash commands ────────────────────────────────────────────────
@@ -586,9 +627,7 @@ export class App {
     // cycle.  This ensures system messages render cleanly without old
     // prompt fragments leaking through.
     if (needsPromptKick) {
-      this.sentinel.muteUntilNextPrompt();
-      this.sentinel.skipNextCapture();
-      this.vm?.sendSerial('\n');
+      void this.refreshPrompt("slash-command");
     }
   }
 
@@ -668,9 +707,7 @@ export class App {
       // Lesson not found — queue error message with proper prompt refresh.
       // (openLessonByMeta won't run, so we handle the kick here.)
       this.sentinel.queueSystemMessage(`Lesson ${num} not found.`);
-      this.sentinel.muteUntilNextPrompt();
-      this.sentinel.skipNextCapture();
-      this.vm?.sendSerial('\n');
+      void this.refreshPrompt("lesson-not-found");
       return;
     }
     // openLessonByMeta handles its own muteUntilNextPrompt + prompt kick.
@@ -730,10 +767,8 @@ export class App {
 
     // Trigger fresh prompt after messages — mute stale serial bytes until
     // the kicked \n produces CMD_START for the fresh prompt.
-    console.log("[openLessonByMeta] muteUntilNextPrompt + skipNextCapture + sending \\n");
-    this.sentinel.muteUntilNextPrompt();
-    this.sentinel.skipNextCapture();
-    this.vm?.sendSerial('\n');
+    console.log("[openLessonByMeta] refreshPrompt");
+    await this.refreshPrompt("open-lesson");
 
     this.terminalPane?.focus();
   }
@@ -871,9 +906,7 @@ export class App {
     this.seeding = false;
     this.restoreDisplay();
     this.sentinel.queueSystemMessage("Sandbox reset.");
-    this.sentinel.muteUntilNextPrompt();
-    this.sentinel.skipNextCapture();
-    this.vm.sendSerial('\n');
+    void this.refreshPrompt("reset-sandbox");
   }
 
   // ── UI updates ────────────────────────────────────────────────────
@@ -889,8 +922,10 @@ export class App {
 
   private scheduleTerminalSizeSync(cols: number, rows: number, reason: string): void {
     if (cols <= 0 || rows <= 0) return;
+    if (cols === this.lastSyncedCols && rows === this.lastSyncedRows) return;
     this.pendingCols = cols;
     this.pendingRows = rows;
+    if (this.deferTerminalSizeSync) return;
     if (this.sizeSyncTimer) clearTimeout(this.sizeSyncTimer);
     this.sizeSyncTimer = setTimeout(() => {
       this.sizeSyncTimer = null;
@@ -902,6 +937,7 @@ export class App {
     const cols = this.pendingCols ?? this.terminalPane?.term.cols ?? 0;
     const rows = this.pendingRows ?? this.terminalPane?.term.rows ?? 0;
     if (!this.vm || cols <= 0 || rows <= 0) return;
+    if (cols === this.lastSyncedCols && rows === this.lastSyncedRows) return;
     if (!this.sentinel.isReady) {
       // Boot sentinel not ready yet; retry shortly.
       this.scheduleTerminalSizeSync(cols, rows, "retry-not-ready");
@@ -910,6 +946,11 @@ export class App {
     if (!this.terminalPane?.isInputIdle) {
       // Don't inject control commands while user is typing.
       this.scheduleTerminalSizeSync(cols, rows, "retry-input-busy");
+      return;
+    }
+    if (this.promptRefreshInFlight) {
+      // Avoid overlapping internal shell commands (each prints a prompt).
+      this.scheduleTerminalSizeSync(cols, rows, "retry-prompt-refresh");
       return;
     }
     if (this.seeding || this.serialSuppressed) {
@@ -926,9 +967,23 @@ export class App {
     // dimensions so readline wraps at visible terminal edges.
     this.sentinel.muteUntilNextPrompt();
     this.sentinel.skipNextCapture();
+    this.lastSyncedCols = cols;
+    this.lastSyncedRows = rows;
+    this.pendingCols = null;
+    this.pendingRows = null;
     this.vm.sendSerial(
       ` stty rows ${rows} cols ${cols} >/dev/null 2>&1; export LINES=${rows} COLUMNS=${cols}\n`,
     );
+  }
+
+  private consumePendingSizeSync(): { cols: number; rows: number } | null {
+    const cols = this.pendingCols ?? this.terminalPane?.term.cols ?? 0;
+    const rows = this.pendingRows ?? this.terminalPane?.term.rows ?? 0;
+    if (cols <= 0 || rows <= 0) return null;
+    this.pendingCols = null;
+    this.pendingRows = null;
+    if (cols === this.lastSyncedCols && rows === this.lastSyncedRows) return null;
+    return { cols, rows };
   }
 
   private updateExerciseBar(): void {

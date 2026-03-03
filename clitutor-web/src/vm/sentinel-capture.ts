@@ -42,13 +42,13 @@ export class SentinelCapture {
 
   /**
    * When true, serial display output is suppressed (old prompt bytes still in
-   * the serial pipeline are hidden).  Cleared when the next CMD_START sentinel
-   * arrives, signalling the start of a fresh prompt cycle.
+   * the serial pipeline are hidden).
    *
    * System messages (via displayQueue / flushDisplayQueue) bypass this flag
    * because they write through a separate path.
    */
   private muteSerial = false;
+  private releaseMuteOnSkippedCapture = false;
 
   /**
    * Resolve function for waitForCommand().  Set when a caller is waiting for
@@ -120,12 +120,6 @@ export class SentinelCapture {
       console.log("[SentinelCapture] processOutput: sentinel=%s capturing=%s skipCaptures=%d ready=%s muteSerial=%s",
         sentinelBody.slice(0, 60), this.capturing, this.skipCaptures, this.ready, this.muteSerial);
       if (sentinelBody === CMD_START_SENTINEL) {
-        // CMD_START marks the beginning of a fresh prompt cycle.
-        // Clear muteSerial so the new PS1 prompt renders normally.
-        if (this.muteSerial) {
-          this.muteSerial = false;
-          console.log("[SentinelCapture] CMD_START: cleared muteSerial");
-        }
         this.capturing = true;
         this.capturedChunks = [];
       } else if (sentinelBody.startsWith(CMD_END_SENTINEL + ":")) {
@@ -214,6 +208,14 @@ export class SentinelCapture {
     if (this.skipCaptures > 0) {
       this.skipCaptures--;
       console.log("[SentinelCapture] SKIPPED capture (skipCaptures now %d)", this.skipCaptures);
+      // Internal prompt-kick/maintenance commands use skipNextCapture().
+      // Release serial mute only after that skipped command completes, so
+      // echoed internal command text (e.g. stty) stays hidden.
+      if (this.releaseMuteOnSkippedCapture) {
+        this.releaseMuteOnSkippedCapture = false;
+        this.muteSerial = false;
+        console.log("[SentinelCapture] SKIPPED capture: cleared muteSerial");
+      }
       if (!this.ready) {
         this.ready = true;
         this.flushPendingMessages();
@@ -287,17 +289,14 @@ export class SentinelCapture {
   }
 
   /**
-   * Suppress serial display output until the next CMD_START sentinel.
+   * Suppress serial display output for one internal skipped capture.
    *
-   * After validation fires system messages, old prompt bytes may still be in
-   * the serial pipeline. This flag prevents stale bytes from rendering.
-   *
-   * The flag is cleared deterministically when CMD_START is processed — no
-   * timers, no guessing.  System messages (displayQueue) are unaffected
-   * because they write through flushDisplayQueue, not through displayParts.
+   * Used around internal prompt-kick/maintenance commands. The mute is
+   * released when the corresponding skipped CMD_END is processed.
    */
   muteUntilNextPrompt(): void {
     this.muteSerial = true;
+    this.releaseMuteOnSkippedCapture = true;
     console.log("[SentinelCapture] muteUntilNextPrompt: muteSerial=true");
   }
 
@@ -330,6 +329,7 @@ export class SentinelCapture {
     this.skipCaptures = 1;
     this.ready = false;
     this.muteSerial = false;
+    this.releaseMuteOnSkippedCapture = false;
     this.commandWaiter = null;
     this.pendingMessages = [];
     this.displayQueue = [];

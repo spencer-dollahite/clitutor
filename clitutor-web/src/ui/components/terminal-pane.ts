@@ -78,16 +78,16 @@ export class TerminalPane {
         if (ch === "\r" || ch === "\n") {
           const stripped = this.inputBuffer.trim();
           if (stripped.startsWith("/") && this.onSlashCommand) {
-            // Don't send to VM; handle as slash command
-            // Send Ctrl+U to clear the line, then Enter for fresh prompt
+            // Don't send slash commands to the VM shell.
+            // Clear the current input line only; App controls any prompt refresh
+            // needed for the slash command lifecycle.
             this.vm?.sendSerial("\x15");
-            this.vm?.sendSerial("\r");
             this.inputBuffer = "";
             this.onSlashCommand(stripped);
             return;
           }
           this.inputBuffer = "";
-          this.vm?.sendSerial(data);
+          this.vm?.sendSerial(this.normalizeEnterPayload(data));
           return;
         } else if (ch === "\x7f") {
           // Backspace
@@ -145,5 +145,10 @@ export class TerminalPane {
   /** Get the underlying terminal for direct access. */
   get term(): Terminal {
     return this.terminal;
+  }
+
+  /** Normalize Enter payloads so CRLF does not submit twice. */
+  private normalizeEnterPayload(data: string): string {
+    return data.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   }
 }

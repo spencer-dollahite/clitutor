@@ -24,9 +24,17 @@
   - `clitutor-web/public/lessons/01_slicing_and_dicing.md`
   - `clitutor-web/public/lessons/10_vi.md`
 - Updated TUI PTY capture to strip prompt+echo first line before validation.
+- Web terminal serial input now normalizes Enter payloads (`\r\n`/`\r` -> `\n`)
+  before forwarding to VM to prevent duplicate empty-command submits and
+  repeated prompts.
+- Web startup prompt behavior now coalesces deferred terminal size-sync (`stty`)
+  into the lesson-open prompt refresh, and dedupes already-synced dimensions,
+  to avoid multiple prompt repaints on initial lesson load.
+- Sentinel mute release now occurs on the skipped internal capture `CMD_END`
+  (not `CMD_START`) so delayed/stale sentinel ordering cannot reveal internal
+  maintenance commands like `stty ...` in the visible terminal.
 
 ## Local Dev
-- Web dev server command: `cd clitutor-web && npm run dev -- --host 127.0.0.1 --port 5173`
+- Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`
 - TUI tests (fast subset): `.venv/bin/pytest -q tests/test_validator.py tests/test_loader.py tests/test_executor.py`
 - Docker-backed `test_student_flow.py` requires Docker daemon access.
-
