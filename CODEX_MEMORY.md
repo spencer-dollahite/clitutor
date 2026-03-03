@@ -43,6 +43,9 @@
 - Lesson-open flow now defers execution of terminal-size sync through sidebar
   settle (~380ms) so the pending resize sync is consumed by the same
   `refreshPrompt("open-lesson")` command, preventing a second startup prompt.
+- Final web lesson (`14_next_steps`) now uses a dedicated non-VM interactive
+  guide page (`NextStepsGuide`) and skips v86 boot entirely, with dynamic setup
+  tracks for local native, local VM, and cloud environments.
 
 ## Local Dev
 - Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`

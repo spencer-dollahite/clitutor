@@ -15,6 +15,7 @@ import { OutputValidator } from "../core/validator";
 import { calculateXp, getLevelInfo, levelProgress } from "../core/xp";
 import { TerminalPane } from "./components/terminal-pane";
 import { MarkdownPane } from "./components/markdown-pane";
+import { NextStepsGuide } from "./components/next-steps-guide";
 import { HintOverlay } from "./components/hint-overlay";
 import { LessonPicker } from "./screens/lesson-picker";
 import { showToast } from "./toast";
@@ -28,8 +29,10 @@ export class App {
   private validator: OutputValidator | null = null;
   private terminalPane: TerminalPane | null = null;
   private markdownPane: MarkdownPane | null = null;
+  private nextStepsGuide: NextStepsGuide | null = null;
   private hintOverlay: HintOverlay;
   private picker: LessonPicker | null = null;
+  private static readonly NEXT_STEPS_LESSON_ID = "14_next_steps";
 
   // Lesson state
   private lessonsMeta: LessonMeta[] = [];
@@ -102,6 +105,11 @@ export class App {
     this.picker?.destroy();
     this.picker = null;
 
+    if (this.isNextStepsLesson(meta)) {
+      await this.enterNextStepsLesson(meta);
+      return;
+    }
+
     // Reset sentinel state so stale ready/skipCaptures/capturing
     // from a previous lesson don't carry over
     this.sentinel.reset();
@@ -170,6 +178,8 @@ export class App {
     // Destroy terminal layout
     this.terminalPane = null;
     this.markdownPane = null;
+    this.nextStepsGuide?.destroy();
+    this.nextStepsGuide = null;
     this.termContainer = null;
     this.sidebar = null;
     this.sidebarContent = null;
@@ -182,6 +192,25 @@ export class App {
 
     // Show picker with updated progress
     this.showPicker();
+  }
+
+  private isNextStepsLesson(meta: LessonMeta): boolean {
+    return (
+      meta.id === App.NEXT_STEPS_LESSON_ID ||
+      meta.slug === "next-steps"
+    );
+  }
+
+  private async enterNextStepsLesson(meta: LessonMeta): Promise<void> {
+    this.currentLesson = await this.loader.loadLesson(meta);
+    this.currentExercise = 0;
+
+    // No VM for this lesson — render dedicated setup guide.
+    this.renderNextStepsLayout();
+    if (this.termContainer && this.currentLesson) {
+      this.nextStepsGuide = new NextStepsGuide(this.termContainer, this.currentLesson);
+    }
+    this.updateStatusBar();
   }
 
   // ── Layout ────────────────────────────────────────────────────────
@@ -236,6 +265,34 @@ export class App {
     this.terminalPane.onSlashCommand = (cmd) => this.handleSlashCommand(cmd);
     this.terminalPane.onTerminalResized = (cols, rows) =>
       this.scheduleTerminalSizeSync(cols, rows, "resize");
+  }
+
+  private renderNextStepsLayout(): void {
+    this.root.innerHTML = "";
+    this.terminalPane = null;
+    this.markdownPane = null;
+    this.nextStepsGuide?.destroy();
+    this.nextStepsGuide = null;
+    this.sidebar = null;
+    this.sidebarContent = null;
+    this.exerciseBar = null;
+    this.sidebarOpen = false;
+
+    this.appMain = document.createElement("div");
+    this.appMain.className = "app-main";
+    this.root.appendChild(this.appMain);
+
+    const termArea = document.createElement("div");
+    termArea.className = "term-area next-steps-area";
+    this.appMain.appendChild(termArea);
+
+    this.termContainer = document.createElement("div");
+    this.termContainer.className = "next-steps-container";
+    termArea.appendChild(this.termContainer);
+
+    this.statusBar = document.createElement("div");
+    this.statusBar.className = "status-bar";
+    termArea.appendChild(this.statusBar);
   }
 
   private bootTimer: ReturnType<typeof setInterval> | null = null;
@@ -703,6 +760,12 @@ export class App {
       // (openLessonByMeta won't run, so we handle the kick here.)
       this.sentinel.queueSystemMessage(`Lesson ${num} not found.`);
       void this.refreshPrompt("lesson-not-found");
+      return;
+    }
+    if (this.isNextStepsLesson(meta)) {
+      // Final lesson is a standalone non-VM guide page.
+      this.backToPicker();
+      await this.enterLesson(meta);
       return;
     }
     // openLessonByMeta handles its own muteUntilNextPrompt + prompt kick.
