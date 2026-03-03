@@ -48,7 +48,7 @@ export class SentinelCapture {
    * because they write through a separate path.
    */
   private muteSerial = false;
-  private releaseMuteOnSkippedCapture = false;
+  private pendingMutedSkips = 0;
 
   /**
    * Resolve function for waitForCommand().  Set when a caller is waiting for
@@ -208,13 +208,16 @@ export class SentinelCapture {
     if (this.skipCaptures > 0) {
       this.skipCaptures--;
       console.log("[SentinelCapture] SKIPPED capture (skipCaptures now %d)", this.skipCaptures);
-      // Internal prompt-kick/maintenance commands use skipNextCapture().
-      // Release serial mute only after that skipped command completes, so
-      // echoed internal command text (e.g. stty) stays hidden.
-      if (this.releaseMuteOnSkippedCapture) {
-        this.releaseMuteOnSkippedCapture = false;
-        this.muteSerial = false;
-        console.log("[SentinelCapture] SKIPPED capture: cleared muteSerial");
+      // Release one internal muted-skip slot (if any). Internal prompt-kick
+      // / maintenance commands arm this via skipNextCapture while muted.
+      if (this.pendingMutedSkips > 0) {
+        this.pendingMutedSkips--;
+        this.muteSerial = this.pendingMutedSkips > 0;
+        console.log(
+          "[SentinelCapture] SKIPPED capture: pendingMutedSkips=%d muteSerial=%s",
+          this.pendingMutedSkips,
+          this.muteSerial,
+        );
       }
       if (!this.ready) {
         this.ready = true;
@@ -289,14 +292,12 @@ export class SentinelCapture {
   }
 
   /**
-   * Suppress serial display output for one internal skipped capture.
-   *
-   * Used around internal prompt-kick/maintenance commands. The mute is
-   * released when the corresponding skipped CMD_END is processed.
+   * Suppress serial display output until an internal skipped capture releases
+   * it. Callers typically pair this with skipNextCapture() + an internal
+   * command send.
    */
   muteUntilNextPrompt(): void {
     this.muteSerial = true;
-    this.releaseMuteOnSkippedCapture = true;
     console.log("[SentinelCapture] muteUntilNextPrompt: muteSerial=true");
   }
 
@@ -318,6 +319,11 @@ export class SentinelCapture {
   /** Increment skip counter (e.g., for empty commands from slash command handling). */
   skipNextCapture(): void {
     this.skipCaptures++;
+    // If serial display is currently muted, this skipped capture is
+    // responsible for releasing one mute slot at CMD_END.
+    if (this.muteSerial) {
+      this.pendingMutedSkips++;
+    }
     console.log("[SentinelCapture] skipNextCapture: skipCaptures now=%d", this.skipCaptures);
   }
 
@@ -329,7 +335,7 @@ export class SentinelCapture {
     this.skipCaptures = 1;
     this.ready = false;
     this.muteSerial = false;
-    this.releaseMuteOnSkippedCapture = false;
+    this.pendingMutedSkips = 0;
     this.commandWaiter = null;
     this.pendingMessages = [];
     this.displayQueue = [];

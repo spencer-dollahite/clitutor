@@ -33,6 +33,13 @@
 - Sentinel mute release now occurs on the skipped internal capture `CMD_END`
   (not `CMD_START`) so delayed/stale sentinel ordering cannot reveal internal
   maintenance commands like `stty ...` in the visible terminal.
+- Sentinel mute tracking now uses a counter (`pendingMutedSkips`) so overlapping
+  internal skipped commands cannot unmute each other early.
+- Sentinel counter arming now happens in `skipNextCapture()` (only when muted),
+  preventing unmatched mute calls (like pre-validation mute) from hiding the
+  next prompt indefinitely.
+- Removed eager post-boot terminal-size sync; first size sync is deferred until
+  lesson layout stabilizes to avoid transient-width `stty` churn at startup.
 
 ## Local Dev
 - Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`

@@ -392,14 +392,9 @@ export class App {
       });
     }
 
-    // Sync guest readline line-wrapping width/height to xterm dimensions.
-    // This prevents prompt/input corruption when viewport width differs from
-    // the shell's default terminal size.
-    this.scheduleTerminalSizeSync(
-      this.terminalPane?.term.cols ?? 0,
-      this.terminalPane?.term.rows ?? 0,
-      "post-boot",
-    );
+    // Initial terminal-size sync is deferred until lesson UI layout settles.
+    // This avoids transient pre-sidebar widths causing extra maintenance
+    // commands and prompt repaints during startup.
   }
 
   private autoScrollToExercise(): void {
