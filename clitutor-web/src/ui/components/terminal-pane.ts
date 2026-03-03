@@ -16,6 +16,11 @@ export class TerminalPane {
 
   /** Buffer for detecting slash commands. */
   private inputBuffer = "";
+  private lastCols = 0;
+  private lastRows = 0;
+
+  /** Callback when xterm dimensions change after fit. */
+  onTerminalResized: ((cols: number, rows: number) => void) | null = null;
 
   constructor(parent: HTMLElement) {
     this.container = document.createElement("div");
@@ -64,6 +69,7 @@ export class TerminalPane {
     this.vm = vm;
     this.terminal.open(this.container);
     this.fitAddon.fit();
+    this.emitResizeIfChanged();
 
     // Terminal input → VM serial
     this.terminal.onData((data) => {
@@ -100,6 +106,7 @@ export class TerminalPane {
     // Handle resize
     const resizeObserver = new ResizeObserver(() => {
       this.fitAddon.fit();
+      this.emitResizeIfChanged();
     });
     resizeObserver.observe(this.container);
   }
@@ -117,6 +124,22 @@ export class TerminalPane {
   /** Fit terminal to container dimensions. */
   fit(): void {
     this.fitAddon.fit();
+    this.emitResizeIfChanged();
+  }
+
+  /** True when there is no partially typed command awaiting Enter. */
+  get isInputIdle(): boolean {
+    return this.inputBuffer.length === 0;
+  }
+
+  private emitResizeIfChanged(): void {
+    const cols = this.terminal.cols;
+    const rows = this.terminal.rows;
+    if (cols <= 0 || rows <= 0) return;
+    if (cols === this.lastCols && rows === this.lastRows) return;
+    this.lastCols = cols;
+    this.lastRows = rows;
+    this.onTerminalResized?.(cols, rows);
   }
 
   /** Get the underlying terminal for direct access. */

@@ -259,7 +259,9 @@ export class SentinelCapture {
     }
     // Buffer the message instead of writing directly to avoid interleaving
     // with serial data (which can corrupt ANSI sequences in xterm.js).
-    this.displayQueue.push(`\r\x1b[K\x1b[1;36m  \u25b8 ${text}\x1b[0m\r\n`);
+    // Always print on a new line. Avoid \r\x1b[K prompt-line clearing here,
+    // because delayed flushes can race with user typing and erase input.
+    this.displayQueue.push(`\r\n\x1b[1;36m  \u25b8 ${text}\x1b[0m\r\n`);
     this.scheduleFlush();
   }
 
@@ -287,9 +289,8 @@ export class SentinelCapture {
   /**
    * Suppress serial display output until the next CMD_START sentinel.
    *
-   * After validation fires system messages (which use \r\x1b[K to overwrite
-   * the current terminal line), old prompt bytes may still be in the serial
-   * pipeline.  This flag prevents those stale bytes from rendering.
+   * After validation fires system messages, old prompt bytes may still be in
+   * the serial pipeline. This flag prevents stale bytes from rendering.
    *
    * The flag is cleared deterministically when CMD_START is processed — no
    * timers, no guessing.  System messages (displayQueue) are unaffected

@@ -43,6 +43,10 @@ export class App {
   private clearSerialBuffer: (() => void) | null = null;
   private autoFollow = true;
   private static readonly AUTO_FOLLOW_KEY = "clitutor-auto-follow";
+  private sizeSyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingCols: number | null = null;
+  private pendingRows: number | null = null;
+  private static readonly TERM_DEBUG_KEY = "clitutor-debug-terminal";
 
   // DOM refs
   private termContainer: HTMLElement | null = null;
@@ -146,6 +150,12 @@ export class App {
     this.seeding = false;
     this.serialSuppressed = false;
     this.clearSerialBuffer = null;
+    if (this.sizeSyncTimer) {
+      clearTimeout(this.sizeSyncTimer);
+      this.sizeSyncTimer = null;
+    }
+    this.pendingCols = null;
+    this.pendingRows = null;
 
     // Destroy terminal layout
     this.terminalPane = null;
@@ -214,6 +224,8 @@ export class App {
     // Create terminal pane
     this.terminalPane = new TerminalPane(this.termContainer);
     this.terminalPane.onSlashCommand = (cmd) => this.handleSlashCommand(cmd);
+    this.terminalPane.onTerminalResized = (cols, rows) =>
+      this.scheduleTerminalSizeSync(cols, rows, "resize");
   }
 
   private bootTimer: ReturnType<typeof setInterval> | null = null;
@@ -369,6 +381,15 @@ export class App {
         };
       });
     }
+
+    // Sync guest readline line-wrapping width/height to xterm dimensions.
+    // This prevents prompt/input corruption when viewport width differs from
+    // the shell's default terminal size.
+    this.scheduleTerminalSizeSync(
+      this.terminalPane?.term.cols ?? 0,
+      this.terminalPane?.term.rows ?? 0,
+      "post-boot",
+    );
   }
 
   private autoScrollToExercise(): void {
@@ -493,8 +514,7 @@ export class App {
       this.sentinel.queueSystemMessage(validation.message);
     }
 
-    // System messages use \r\x1b[K which overwrites the current prompt line.
-    // Kick a fresh prompt so the user sees a usable prompt below the messages.
+    // Kick a fresh prompt so the user sees a usable prompt below system messages.
     this.sentinel.skipNextCapture();
     this.vm?.sendSerial('\n');
   }
@@ -865,6 +885,50 @@ export class App {
     }
     // Refit terminal after sidebar animation
     setTimeout(() => this.terminalPane?.fit(), 350);
+  }
+
+  private scheduleTerminalSizeSync(cols: number, rows: number, reason: string): void {
+    if (cols <= 0 || rows <= 0) return;
+    this.pendingCols = cols;
+    this.pendingRows = rows;
+    if (this.sizeSyncTimer) clearTimeout(this.sizeSyncTimer);
+    this.sizeSyncTimer = setTimeout(() => {
+      this.sizeSyncTimer = null;
+      this.performTerminalSizeSync(reason);
+    }, 80);
+  }
+
+  private performTerminalSizeSync(reason: string): void {
+    const cols = this.pendingCols ?? this.terminalPane?.term.cols ?? 0;
+    const rows = this.pendingRows ?? this.terminalPane?.term.rows ?? 0;
+    if (!this.vm || cols <= 0 || rows <= 0) return;
+    if (!this.sentinel.isReady) {
+      // Boot sentinel not ready yet; retry shortly.
+      this.scheduleTerminalSizeSync(cols, rows, "retry-not-ready");
+      return;
+    }
+    if (!this.terminalPane?.isInputIdle) {
+      // Don't inject control commands while user is typing.
+      this.scheduleTerminalSizeSync(cols, rows, "retry-input-busy");
+      return;
+    }
+    if (this.seeding || this.serialSuppressed) {
+      this.scheduleTerminalSizeSync(cols, rows, "retry-seeding");
+      return;
+    }
+
+    const debug = localStorage.getItem(App.TERM_DEBUG_KEY) === "true";
+    if (debug) {
+      console.log("[terminal-size] sync reason=%s rows=%d cols=%d", reason, rows, cols);
+    }
+
+    // Internal shell maintenance command: update tty size and exported
+    // dimensions so readline wraps at visible terminal edges.
+    this.sentinel.muteUntilNextPrompt();
+    this.sentinel.skipNextCapture();
+    this.vm.sendSerial(
+      ` stty rows ${rows} cols ${cols} >/dev/null 2>&1; export LINES=${rows} COLUMNS=${cols}\n`,
+    );
   }
 
   private updateExerciseBar(): void {
