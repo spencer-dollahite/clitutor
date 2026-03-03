@@ -231,8 +231,7 @@ class TestLesson01SlicingAndDicing:
 
     def test_ex04_cat_incorrect(self):
         vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[3], "cat users.txt")
-        # cat still shows www-data so it would pass output_contains; test that cut specifically works
-        assert vr.passed  # both should pass since output_contains just checks for "www-data"
+        assert not vr.passed
 
     # -- ex05: wc -l --
     def test_ex05_wc_l_correct(self):
@@ -241,7 +240,7 @@ class TestLesson01SlicingAndDicing:
 
     def test_ex05_wc_w_incorrect(self):
         vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[4], "wc -w data.txt")
-        assert vr.passed  # wc -w gives 7 too (each line has 1 word)
+        assert not vr.passed
 
     # -- ex06: sed --
     def test_ex06_sed_correct(self):
@@ -271,9 +270,8 @@ class TestLesson01SlicingAndDicing:
         assert vr.passed
 
     def test_ex08_cat_incorrect(self):
-        # cat shows all IPs including 192.168.1.1, so it would actually pass output_contains
         vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[7], "cat access.log")
-        assert vr.passed  # output_contains "192.168.1.1" — present in raw output too
+        assert not vr.passed
 
 
 # ===================================================================
@@ -1058,11 +1056,10 @@ class TestLesson10Vi:
         assert vr.passed
 
     def test_ex03_cat_only(self):
-        """cat without sed shows all 3 lines including 'keep this too'."""
+        """cat without sed should fail (second line wasn't deleted)."""
         result = self.executor.run("cat edit_me.txt")
         vr = self.validator.validate(self.lesson.exercises[2], result)
-        # output_contains "keep this too" — still present since we didn't delete
-        assert vr.passed  # The text is in the original file too
+        assert not vr.passed
 
     # -- ex04: sed replace --
     def test_ex04_sed_replace_correct(self):

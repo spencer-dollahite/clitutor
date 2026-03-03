@@ -131,8 +131,8 @@ xp: 15
 difficulty: 2
 sandbox_setup:
   - "printf 'root:x:0:0:root:/root:/bin/bash\\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\\nwww-data:x:33:33:www-data:/var/www:/usr/sbin/nologin\\n' > users.txt"
-validation_type: output_contains
-expected: www-data
+validation_type: output_regex
+expected: '^root\nnobody\nwww-data\n?$'
 hints:
   - "Use cut to extract a specific field from a delimited file."
   - "The delimiter is a colon and you want the first field."
@@ -160,7 +160,7 @@ title: Count lines in a file
 xp: 10
 difficulty: 1
 sandbox_setup:
-  - "printf 'line1\\nline2\\nline3\\nline4\\nline5\\nline6\\nline7\\n' > data.txt"
+  - "printf 'line one\\nline two three\\nline\\nline with four words here\\nline\\nline six\\nline seven end\\n' > data.txt"
 validation_type: output_contains
 expected: "7"
 hints:
@@ -254,8 +254,8 @@ xp: 25
 difficulty: 3
 sandbox_setup:
   - "printf '192.168.1.1 GET /index.html 200\\n10.0.0.5 GET /about.html 200\\n192.168.1.1 GET /style.css 200\\n10.0.0.5 GET /contact.html 200\\n192.168.1.1 GET /api/data 200\\n172.16.0.1 GET /index.html 200\\n' > access.log"
-validation_type: output_contains
-expected: 192.168.1.1
+validation_type: output_regex
+expected: '^(?:\s*3\s+192\.168\.1\.1|\s*192\.168\.1\.1\s+3)\s*$'
 hints:
   - "Extract the first field (IP address), sort, count unique values, and sort numerically."
   - "Use cut -d' ' -f1 to get IPs, then sort | uniq -c | sort -rn."

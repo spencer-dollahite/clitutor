@@ -395,6 +395,11 @@ class PtyTerminalPane(Widget, can_focus=True):
         text = _ANSI_CSI_RE.sub("", text)
         text = _ANSI_OSC_RE.sub("", text)
         text = _CTRL_CHAR_RE.sub("", text)
+        # Captures include prompt + echoed command on the first line.
+        # Strip that line so validation sees command output only.
+        nl_idx = text.find("\n")
+        if nl_idx != -1:
+            text = text[nl_idx + 1 :]
 
         result = CommandResult(
             command="",

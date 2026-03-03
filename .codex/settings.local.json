@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "WebSearch",
+      "WebFetch(*)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rm -*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean *)",
+      "Bash(git checkout . *)",
+      "Bash(git restore . *)",
+      "Bash(git branch -D*)"
+    ]
+  }
+}

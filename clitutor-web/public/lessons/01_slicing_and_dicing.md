@@ -131,8 +131,8 @@ xp: 15
 difficulty: 2
 sandbox_setup:
   - "printf 'root:x:0:0:root:/root:/bin/bash\\nlcdr_thompson:x:1001:1001:LCDR Thompson:/home/lcdr_thompson:/bin/bash\\nens_rodriguez:x:1002:1002:ENS Rodriguez:/home/ens_rodriguez:/bin/bash\\n' > crew.txt"
-validation_type: output_contains
-expected: lcdr_thompson
+validation_type: output_regex
+expected: '^root\nlcdr_thompson\nens_rodriguez\n?$'
 hints:
   - "Use cut to extract a specific field from a delimited file."
   - "The delimiter is a colon and you want the first field."
@@ -254,8 +254,8 @@ xp: 25
 difficulty: 3
 sandbox_setup:
   - "printf '192.168.1.1 sshd auth failure\n10.0.0.5 sshd auth success\n192.168.1.1 sshd auth failure\n10.0.0.5 sshd auth success\n192.168.1.1 sshd auth failure\n172.16.0.1 sshd auth success\n' > auth.log"
-validation_type: output_contains
-expected: 192.168.1.1
+validation_type: output_regex
+expected: '^(?:\s*3\s+192\.168\.1\.1|\s*192\.168\.1\.1\s+3)\s*$'
 hints:
   - "Extract the first field (IP address), sort, count unique values, and sort numerically."
   - "Use cut -d' ' -f1 to get IPs, then sort | uniq -c | sort -rn."
