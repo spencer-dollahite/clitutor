@@ -82,8 +82,8 @@ title: Set a custom prompt
 xp: 15
 difficulty: 2
 sandbox_setup: null
-validation_type: output_contains
-expected: "PS1"
+validation_type: output_regex
+expected: 'PS1=|\\u@\\h:\\w\\\$|[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+:[^\n]*[#$]'
 hints:
   - "Assign a new value to the PS1 variable using escape sequences."
   - "Use the export command or direct assignment."

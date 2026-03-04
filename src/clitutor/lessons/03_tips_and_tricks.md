@@ -1,277 +1,216 @@
 # Tips and Tricks
 
-This lesson covers productivity boosters -- keyboard shortcuts, command history,
-job control, and other tricks that will make you dramatically faster on the
-command line. These are the habits that separate beginners from power users.
+This lesson is a hands-on speed drill built around a realistic on-call moment.
+An alert just fired. You need to build a triage workspace, move quickly, and
+avoid wasting keystrokes.
 
-## Command History
+Goal: build muscle memory for history recall, cursor movement, tab completion,
+and fast command composition under time pressure.
 
-Every command you type is saved in your shell history (usually in
-`~/.bash_history`). You can browse and re-use previous commands:
+## Fast Recall and Editing
 
-```bash
-history              # show your command history (numbered)
-history | grep ssh   # search history for a term
-!!                   # repeat the last command
-sudo !!              # re-run the last command with sudo (very handy!)
-!<string>            # run the most recent command starting with <string>
-!42                  # run command number 42 from history
-!$                   # the last argument of the previous command
-```
+These are the shortcuts you should actively practice during each exercise. The
+first exercises are slow reps. The last exercises are speed reps.
 
-**`Ctrl+R`** starts a **reverse incremental search** through your history. Just
-start typing and it will find the most recent match. Press `Ctrl+R` again to
-cycle through older matches. Press `Enter` to execute, or `Ctrl+C` to cancel.
-This is, in many experienced users' opinions, the best way to recall commands.
+| Shortcut | Action |
+|----------|--------|
+| `Up Arrow` / `Down Arrow` | Move through recent commands |
+| `Ctrl+R` | Reverse-search command history |
+| `Ctrl+A` / `Ctrl+E` | Jump to start/end of line |
+| `Alt+B` / `Alt+F` | Move by word |
+| `Ctrl+W` | Delete previous word |
+| `Ctrl+U` / `Ctrl+K` | Delete before/after cursor |
+| `Tab` | Complete commands/paths |
+
+Rule for this lesson: if you make a typo, fix it in place with shortcuts.
+Avoid clearing and retyping entire commands.
+
+## Scenario Setup: Active Incident
+
+You are on call and a service health check just failed. Work through this
+sequence like a real triage pass: set up, inspect, log, summarize.
 
 <!-- exercise
 id: ex01
-title: Use the type command
-xp: 10
+title: Enter your incident workspace
+xp: 8
 difficulty: 1
 sandbox_setup: null
-validation_type: output_contains
-expected: builtin
+validation_type: cwd_regex
+expected: "/incident$"
 hints:
-  - "The 'type' command tells you what kind of command something is."
-  - "Try using type on a well-known shell builtin."
-  - "Type: `type cd`"
+  - "Create a directory named incident and change into it."
+  - "Use command chaining so setup is one fast action."
+  - "Type: `mkdir -p incident && cd incident`"
 -->
-### Exercise 1: Identify a builtin command
-Use the `type` command to check what kind of command `cd` is.
+### Exercise 1: Enter your incident workspace
+Create a directory called `incident` and move into it.
+
+Warm-up rep: before pressing Enter, hit `Ctrl+A`, then `Ctrl+E`, then run it.
 
 ---
-
-## Keyboard Shortcuts
-
-These shortcuts work in bash (and most shells using readline/emacs mode):
-
-### Navigation
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+A` | Jump to beginning of line |
-| `Ctrl+E` | Jump to end of line |
-| `Ctrl+B` | Move back one character |
-| `Ctrl+F` | Move forward one character |
-| `Alt+B`  | Move back one word |
-| `Alt+F`  | Move forward one word |
-
-### Editing
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+W` | Delete the word before the cursor |
-| `Ctrl+U` | Delete everything before the cursor |
-| `Ctrl+K` | Delete everything after the cursor |
-| `Ctrl+Y` | Paste (yank) the last killed text |
-
-### Other
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+C` | Cancel the current command / kill running process |
-| `Ctrl+L` | Clear the screen (same as `clear`) |
-| `Ctrl+D` | End of input / logout |
 
 <!-- exercise
 id: ex02
-title: Use echo with special characters
-xp: 10
+title: Create triage checklists quickly
+xp: 8
 difficulty: 1
 sandbox_setup: null
-validation_type: output_contains
-expected: keyboard shortcuts are powerful
+validation_type: file_exists
+expected: incident/checklists/auth.txt
 hints:
-  - "Use echo to print a message to the screen."
-  - "Put the text in quotes after echo."
-  - "Type: `echo 'keyboard shortcuts are powerful'`"
+  - "Create `incident/checklists` and three files in one command."
+  - "Brace expansion is faster than three separate touch commands."
+  - "Type: `mkdir -p incident/checklists && touch incident/checklists/{network,auth,dns}.txt`"
 -->
-### Exercise 2: Practice on the command line
-Use `echo` to print the message: `keyboard shortcuts are powerful`
+### Exercise 2: Create triage checklists quickly
+Create `network.txt`, `auth.txt`, and `dns.txt` in `incident/checklists/` as
+your triage checklist files.
+
+Type only part of the path and use `Tab` to complete the rest.
 
 ---
-
-## Tab Completion
-
-After typing a few letters, press **Tab**:
-- If the match is unique, the shell auto-completes the word
-- If multiple matches exist, press **Tab twice** to list all possibilities
-
-Tab completion works for:
-- Filenames and directories
-- Commands
-- Variables (after `$`)
-- Hostnames (after `@` in some setups)
-
-This is a **massive** quality-of-life feature. If it does not work on your
-system, research how to install `bash-completion` for your distribution.
 
 <!-- exercise
 id: ex03
-title: Create nested structure
-xp: 15
-difficulty: 2
+title: Count checklist files with a wildcard
+xp: 10
+difficulty: 1
 sandbox_setup: null
-validation_type: file_exists
-expected: documents/reports/quarterly.txt
+validation_type: output_regex
+expected: '^\s*3\s*$'
 hints:
-  - "Use mkdir -p to create the full directory path in one command."
-  - "Then touch to create the file inside the nested directory."
-  - "Type: `mkdir -p documents/reports && touch documents/reports/quarterly.txt`"
+  - "Count checklist files to confirm setup is complete."
+  - "Use a wildcard with wc -l."
+  - "Type: `ls incident/checklists/*.txt | wc -l`"
 -->
-### Exercise 3: Create a nested structure
-Create the directory path `documents/reports/` and a file `quarterly.txt` inside it. (Hint: `mkdir -p` creates parent directories as needed.)
+### Exercise 3: Count checklist files with a wildcard
+Count how many `.txt` files are in `incident/checklists/`.
+
+Do not start from an empty line: use `Up Arrow`, edit, then run.
 
 ---
-
-## Job Control
-
-You can manage running processes directly from the shell:
-
-```bash
-sleep 300 &         # start a command in the background
-jobs                 # list background jobs
-fg %1               # bring job 1 to the foreground
-Ctrl+Z              # suspend the foreground process
-bg                   # resume a suspended job in the background
-```
-
-This is useful when you have a long-running process and need your shell back.
 
 <!-- exercise
 id: ex04
-title: Echo a process list
-xp: 15
+title: Cursor movement drill
+xp: 10
 difficulty: 2
 sandbox_setup: null
-validation_type: output_regex
-expected: "PID|pid|sleep"
+validation_type: output_contains
+expected: incident triage in progress
 hints:
-  - "Use a command that shows running processes."
-  - "The ps command shows running processes. Or try echo with $BASHPID."
-  - "Type: `echo \"My PID is $$\"`"
+  - "Print this exact phrase with echo."
+  - "Deliberately fix a typo using Ctrl+A/Ctrl+E or Alt+B/Alt+F before you run it."
+  - "Type: `echo 'incident triage in progress'`"
 -->
-### Exercise 4: Show process information
-Use `echo` with a shell variable to display your current process ID (PID). The variable `$$` holds the current shell's PID.
+### Exercise 4: Cursor movement drill
+Print exactly:
+
+`incident triage in progress`
+
+This is your editing rep. Fix mistakes with cursor movement keys, not retyping.
 
 ---
 
-## Aliases
+## Job Control in the Middle of Work
 
-Aliases let you create shortcuts for commands you use frequently:
-
-```bash
-alias ll='ls -la'
-alias gs='git status'
-alias ..='cd ..'
-alias ...='cd ../..'
-```
-
-Aliases defined on the command line last only for the current session. To make
-them permanent, add them to your `~/.bashrc` or `~/.bash_aliases` file.
+A common on-call move: kick off a long-running check, then keep working.
 
 <!-- exercise
 id: ex05
-title: Create an alias
-xp: 15
+title: Start a background check and list jobs
+xp: 12
 difficulty: 2
 sandbox_setup: null
-validation_type: output_contains
-expected: ls -la
+validation_type: output_regex
+expected: '(sleep|Running|\[1\])'
 hints:
-  - "Define an alias using the alias command, then verify it exists."
-  - "The format is: alias name='command'. Then run alias to list all."
-  - "Type: `alias ll='ls -la' && alias`"
+  - "Start a background check, then verify it in the jobs list."
+  - "Use `&` to background a command."
+  - "Type: `sleep 60 & jobs`"
 -->
-### Exercise 5: Create an alias
-Create an alias called `ll` that runs `ls -la`, then display all defined aliases.
+### Exercise 5: Start a background check and list jobs
+Start a background task and verify it appears in the jobs list.
+
+After running it, tap `Up Arrow` and inspect the command you just used.
 
 ---
 
-## Brace Expansion and Wildcards
-
-**Brace expansion** generates strings:
-
-```bash
-echo {a,b,c}           # a b c
-mkdir dir_{01..05}      # dir_01 dir_02 dir_03 dir_04 dir_05
-touch file_{a,b,c}.txt  # file_a.txt file_b.txt file_c.txt
-```
-
-**Wildcards** (globbing) match filenames:
-
-| Pattern | Matches |
-|---------|---------|
-| `*`     | Any string (including empty) |
-| `?`     | Exactly one character |
-| `[abc]` | One of a, b, or c |
-| `[0-9]` | One digit |
-
-```bash
-ls *.txt              # all .txt files
-ls file?.log          # file1.log, fileA.log, etc.
-rm temp_[0-9]*        # remove files starting with temp_ followed by a digit
-```
+## Aliases and Command Chaining
 
 <!-- exercise
 id: ex06
-title: Brace expansion
-xp: 15
-difficulty: 2
-sandbox_setup: null
-validation_type: file_exists
-expected: project_03
-hints:
-  - "Use brace expansion with mkdir to create multiple directories at once."
-  - "The syntax {01..05} generates a sequence."
-  - "Type: `mkdir project_{01..05}`"
--->
-### Exercise 6: Brace expansion
-Create five directories named `project_01` through `project_05` using a single command with brace expansion.
-
----
-
-## Useful Command Combinations
-
-```bash
-# Run two commands in sequence (second runs only if first succeeds)
-mkdir newdir && cd newdir
-
-# Run two commands in sequence (second runs regardless)
-command1 ; command2
-
-# Repeat the last argument
-cat /very/long/path/to/file.conf
-vim !$    # opens the same file in vim
-
-# Quick command substitution
-echo "Today is $(date)"
-echo "I am in $(pwd)"
-```
-
-<!-- exercise
-id: ex07
-title: Command substitution
-xp: 15
+title: Make a quick alias for checklist review
+xp: 14
 difficulty: 2
 sandbox_setup: null
 validation_type: output_contains
-expected: "files:"
+expected: ls -lah incident/checklists
 hints:
-  - "Use command substitution $() to embed one command's output in another."
-  - "The syntax is $(command) inside a string."
-  - "Type: `echo \"files: $(ls)\"` (there may be no files listed and that is OK)"
+  - "Create alias lcheck for listing the checklists directory in long format."
+  - "Immediately verify the alias so you trust it under pressure."
+  - "Type: `alias lcheck='ls -lah incident/checklists' && alias lcheck`"
 -->
-### Exercise 7: Command substitution
-Use `echo` and command substitution to print `files:` followed by the output of `ls`.
+### Exercise 6: Make a quick alias for checklist review
+Create an alias called `lcheck` for:
+
+`ls -lah incident/checklists`
+
+Then show the alias definition to confirm it is correct.
 
 ---
 
-## What You Learned
+<!-- exercise
+id: ex07
+title: Log an action with command chaining
+xp: 18
+difficulty: 3
+sandbox_setup: null
+validation_type: file_contains
+expected: incident/logs/actions.log::checked network
+hints:
+  - "Create the logs directory, append a line, then print the file."
+  - "Use && so each step must succeed before the next runs."
+  - "Type: `mkdir -p incident/logs && echo 'checked network' >> incident/logs/actions.log && cat incident/logs/actions.log`"
+-->
+### Exercise 7: Log an action with command chaining
+Append `checked network` to `incident/logs/actions.log`, then display the file.
 
-- **`history`** and **`Ctrl+R`** -- recall and search previous commands
-- **Keyboard shortcuts** -- `Ctrl+A/E/W/U/K/Y/L/C` for fast editing
-- **Tab completion** -- auto-complete filenames and commands
-- **Job control** -- background jobs, `fg`, `bg`, `Ctrl+Z`
-- **Aliases** -- create shortcuts for frequent commands
-- **Brace expansion** and **wildcards** -- generate and match filenames efficiently
-- **`&&`** vs **`;`** -- chaining commands conditionally or unconditionally
-- **`$()`** -- command substitution
+Speed rep: recall a recent command from history and edit it into this one.
+
+---
+
+<!-- exercise
+id: ex08
+title: Build a one-line status summary
+xp: 20
+difficulty: 3
+sandbox_setup: null
+validation_type: output_contains
+expected: "summary:"
+hints:
+  - "Use command substitution so values are generated dynamically."
+  - "Include checklist count and current directory in one status line."
+  - "Type: `echo \"summary: $(ls incident/checklists/*.txt | wc -l) checklists in $(pwd)\"`"
+-->
+### Exercise 8: Build a one-line status summary
+Print one line that starts with `summary:` and includes:
+- the checklist file count
+- your current directory
+
+Final speed rep: build the whole line in one go using command substitution
+(`$()`) instead of hardcoding values.
+
+---
+
+## What You Practiced
+
+- **History recall** with `Up Arrow` and `Ctrl+R`
+- **Cursor movement/editing** with `Ctrl+A/E`, `Alt+B/F`, `Ctrl+W/U/K`
+- **Tab completion** for faster path entry
+- **Wildcards** for selecting multiple files
+- **Job control** with background tasks and `jobs`
+- **Aliases** for repeated commands
+- **Command chaining** with `&&`
+- **Command substitution** with `$()`

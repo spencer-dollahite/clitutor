@@ -17,6 +17,43 @@
 - Validation types in use include output/cwd/file-based checks.
 
 ## Known Recent Changes
+- Reworked Lesson 03 (`03_tips_and_tricks`) into a progressive, scenario-based
+  incident-triage drill focused on muscle-memory practice, replacing the old
+  generic checks.
+- Removed the prior `type cd` builtin exercise from Lesson 03 and replaced the
+  sequence with smaller exercises covering:
+  - workspace navigation (`cd` + chaining),
+  - tab-friendly path/file creation with brace expansion,
+  - wildcard counting,
+  - cursor/editing drill prompts,
+  - job control (`sleep ... &` + `jobs`),
+  - aliases,
+  - command chaining,
+  - command substitution.
+- Mirrored Lesson 03 updates in both:
+  - `src/clitutor/lessons/03_tips_and_tricks.md`
+  - `clitutor-web/public/lessons/03_tips_and_tricks.md`
+- Updated `tests/test_student_flow.py` Lesson 03 coverage to match the new
+  8-exercise flow.
+- Tuned Lesson 03 pacing (XP/difficulty ramp) to start lighter and end with a
+  stronger capstone:
+  - XP progression: `8, 8, 10, 10, 12, 14, 18, 20` (total still 100)
+  - Difficulty progression: `1, 1, 1, 2, 2, 2, 3, 3`
+- Refined Lesson 03 instructional wording/hints to feel like an escalating
+  on-call incident drill ("warm-up reps" -> "speed reps") while preserving the
+  same validation logic and command targets.
+- Added sandbox startup guard in generated bashrc (web VM + TUI template) to
+  ensure `/etc/hosts` contains `127.0.0.1 localhost`, so `ping localhost`
+  resolves reliably in networking exercises.
+- Lesson 05 prompt exercise 2 validation was relaxed from literal
+  `output_contains: "PS1"` to a regex that accepts either:
+  - `echo "PS1=$PS1"` style output, or
+  - direct `echo $PS1` output (expanded or escaped prompt forms).
+- Mirrored this lesson metadata change in both:
+  - `src/clitutor/lessons/05_prompt.md`
+  - `clitutor-web/public/lessons/05_prompt.md`
+- Added a student-flow regression test to accept
+  `PS1='\\u@\\h:\\w\\$ ' && echo $PS1` for lesson 05 ex02.
 - Tightened several false-positive validations (cut/wc/pipeline/vi delete cases).
 - Added stricter expected patterns in:
   - `src/clitutor/lessons/01_slicing_and_dicing.md`

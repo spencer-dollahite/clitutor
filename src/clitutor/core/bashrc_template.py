@@ -83,5 +83,10 @@ def generate_bashrc(
         # No history file in sandbox
         unset HISTFILE
 
+        # Ensure localhost resolves inside the sandbox session
+        if ! grep -Eq '^[[:space:]]*127\\.0\\.0\\.1[[:space:]]+localhost([[:space:]]|$)' /etc/hosts 2>/dev/null; then
+            echo '127.0.0.1 localhost' >> /etc/hosts
+        fi
+
         cd "{sandbox_path}"
     """)

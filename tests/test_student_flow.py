@@ -411,84 +411,108 @@ class TestLesson03TipsAndTricks:
         self.validator = OutputValidator(docker_sandbox, executor=self.executor)
         _seed_lesson(self.executor, self.lesson)
 
-    # -- ex01: type cd → builtin --
-    def test_ex01_type_cd_correct(self):
-        vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[0], "type cd")
+    # -- ex01: cwd_regex /incident$ --
+    def test_ex01_enter_incident_workspace_correct(self):
+        vr = _run_and_validate(
+            self.executor, self.validator, self.lesson.exercises[0],
+            "mkdir -p incident && cd incident",
+        )
         assert vr.passed
 
-    def test_ex01_echo_incorrect(self):
-        vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[0], "echo cd")
+    def test_ex01_stay_in_home_incorrect(self):
+        vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[0], "pwd")
         assert not vr.passed
 
-    # -- ex02: echo message --
-    def test_ex02_echo_correct(self):
+    # -- ex02: file_exists incident/checklists/auth.txt --
+    def test_ex02_create_checklists_correct(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[1],
-            "echo 'keyboard shortcuts are powerful'",
+            "mkdir -p incident/checklists && touch incident/checklists/{network,auth,dns}.txt",
         )
         assert vr.passed
 
-    def test_ex02_wrong_message_incorrect(self):
-        vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[1], "echo 'hello'")
-        assert not vr.passed
-
-    # -- ex03: file_exists nested --
-    def test_ex03_correct(self):
+    def test_ex02_missing_auth_incorrect(self):
         vr = _run_and_validate(
-            self.executor, self.validator, self.lesson.exercises[2],
-            "mkdir -p documents/reports && touch documents/reports/quarterly.txt",
-        )
-        assert vr.passed
-
-    def test_ex03_wrong_name_incorrect(self):
-        vr = _run_and_validate(
-            self.executor, self.validator, self.lesson.exercises[2],
-            "mkdir -p documents/reports && touch documents/reports/wrong.txt",
+            self.executor, self.validator, self.lesson.exercises[1],
+            "mkdir -p incident/checklists && touch incident/checklists/network.txt",
         )
         assert not vr.passed
 
-    # -- ex04: show PID --
-    def test_ex04_echo_pid_correct(self):
-        vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[3], 'echo "My PID is $$"')
+    # -- ex03: wildcard count == 3 --
+    def test_ex03_count_checklists_correct(self):
+        vr = _run_and_validate(
+            self.executor, self.validator, self.lesson.exercises[2],
+            "mkdir -p incident/checklists && touch incident/checklists/{network,auth,dns}.txt && ls incident/checklists/*.txt | wc -l",
+        )
         assert vr.passed
 
-    # -- ex05: alias --
-    def test_ex05_alias_correct(self):
+    def test_ex03_wrong_count_incorrect(self):
+        vr = _run_and_validate(
+            self.executor, self.validator, self.lesson.exercises[2],
+            "mkdir -p incident/checklists && touch incident/checklists/network.txt && ls incident/checklists/*.txt | wc -l",
+        )
+        assert not vr.passed
+
+    # -- ex04: cursor drill phrase --
+    def test_ex04_phrase_correct(self):
+        vr = _run_and_validate(
+            self.executor, self.validator, self.lesson.exercises[3],
+            "echo 'incident triage in progress'",
+        )
+        assert vr.passed
+
+    # -- ex05: background jobs --
+    def test_ex05_background_jobs_correct(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[4],
-            "alias ll='ls -la' && alias",
+            "sleep 60 & jobs",
         )
         assert vr.passed
 
-    def test_ex05_echo_incorrect(self):
+    def test_ex05_no_job_incorrect(self):
         vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[4], "echo hi")
         assert not vr.passed
 
-    # -- ex06: brace expansion (file_exists project_03) --
-    def test_ex06_brace_expansion_correct(self):
+    # -- ex06: alias lcheck --
+    def test_ex06_alias_correct(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[5],
-            "mkdir project_{01..05}",
+            "alias lcheck='ls -lah incident/checklists' && alias lcheck",
         )
         assert vr.passed
 
-    def test_ex06_single_dir_incorrect(self):
+    def test_ex06_wrong_alias_incorrect(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[5],
-            "mkdir project_01",
+            "alias lcheck='ls -la' && alias lcheck",
         )
         assert not vr.passed
 
-    # -- ex07: command substitution --
-    def test_ex07_correct(self):
+    # -- ex07: file_contains incident/logs/actions.log::checked network --
+    def test_ex07_log_action_correct(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[6],
-            'echo "files: $(ls)"',
+            "mkdir -p incident/logs && echo 'checked network' >> incident/logs/actions.log && cat incident/logs/actions.log",
         )
         assert vr.passed
 
-    def test_ex07_no_prefix_incorrect(self):
-        vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[6], "ls")
+    def test_ex07_wrong_log_content_incorrect(self):
+        vr = _run_and_validate(
+            self.executor, self.validator, self.lesson.exercises[6],
+            "mkdir -p incident/logs && echo 'checked dns' >> incident/logs/actions.log && cat incident/logs/actions.log",
+        )
+        assert not vr.passed
+
+    # -- ex08: status summary --
+    def test_ex08_summary_correct(self):
+        vr = _run_and_validate(
+            self.executor, self.validator, self.lesson.exercises[7],
+            'mkdir -p incident/checklists && touch incident/checklists/{network,auth,dns}.txt && echo "summary: $(ls incident/checklists/*.txt | wc -l) checklists in $(pwd)"',
+        )
+        assert vr.passed
+
+    def test_ex08_no_prefix_incorrect(self):
+        vr = _run_and_validate(self.executor, self.validator, self.lesson.exercises[7], "pwd")
         assert not vr.passed
 
 
@@ -587,6 +611,13 @@ class TestLesson05Prompt:
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[1],
             r"PS1='\u@\h:\w\$ ' && echo \"PS1=$PS1\"",
+        )
+        assert vr.passed
+
+    def test_ex02_set_ps1_echo_value_correct(self):
+        vr = _run_and_validate(
+            self.executor, self.validator, self.lesson.exercises[1],
+            r"PS1='\u@\h:\w\$ ' && echo $PS1",
         )
         assert vr.passed
 
