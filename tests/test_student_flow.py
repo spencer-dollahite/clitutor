@@ -1061,18 +1061,18 @@ class TestLesson10Vi:
         self.validator = OutputValidator(docker_sandbox, executor=self.executor)
         _seed_lesson(self.executor, self.lesson)
 
-    # -- ex01: file_contains vifile.txt --
-    def test_ex01_echo_correct(self):
+    # -- ex01: launch vimtutor --
+    def test_ex01_vimtutor_help_correct(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[0],
-            "echo 'hello from vi' > vifile.txt",
+            "command -v vimtutor",
         )
         assert vr.passed
 
-    def test_ex01_wrong_content_incorrect(self):
+    def test_ex01_echo_incorrect(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[0],
-            "echo 'wrong content' > vifile.txt",
+            "echo hi",
         )
         assert not vr.passed
 

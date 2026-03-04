@@ -58,6 +58,10 @@
 - Relaxed Lesson 07 exercise 3 validation from strict `output_contains: HTTP`
   to regex accepting either header output (`HTTP`) or dashboard body output
   (`Fleet Shore Station Monitor`) to support multiple valid `curl` workflows.
+- Updated Lesson 10 (`10_vi`) exercise 1 to focus on launching `vimtutor` with
+  explicit "spend ~1 hour practicing" guidance; validation now accepts either
+  real tutor screen text (`vim tutor`) or binary-path verification
+  (`command -v vimtutor`) for environments where fullscreen capture is brittle.
 - Lesson 05 prompt exercise 2 validation was relaxed from literal
   `output_contains: "PS1"` to a regex that accepts either:
   - `echo "PS1=$PS1"` style output, or
@@ -96,6 +100,44 @@
 - Final web lesson (`14_next_steps`) now uses a dedicated non-VM interactive
   guide page (`NextStepsGuide`) and skips v86 boot entirely, with dynamic setup
   tracks for local native, local VM, and cloud environments.
+- Reordered lesson sequencing so `10_vi` is positioned as the second-to-last
+  lesson in both metadata tracks; in the web track it now appears immediately
+  before `14_next_steps`, and source metadata order values were adjusted to keep
+  ordering contiguous.
+- Fixed `10_vi` exercise-1 regex compatibility across runtimes:
+  - updated expected pattern to `vimtutor|vim tutor` in both source + web lesson
+    files,
+  - hardened web regex validation to accept legacy Python-style `(?i)` and
+    slash-delimited `/.../flags` patterns instead of erroring with
+    "Invalid regex pattern."
+- Tightened `10_vi` exercise-1 matching to avoid false passes on
+  `vimtutor: command not found` by requiring one of:
+  `/vimtutor`, `vim tutor`, or `usage: vimtutor`.
+- Added VM overlay wrapper at
+  `clitutor-web/build/rootfs-overlay/usr/local/bin/vimtutor` so `vimtutor`
+  exists in lab PATH even when distro packaging differs; wrapper delegates to
+  packaged `vimtutor` when available, otherwise opens tutor files with `vi`.
+- Updated lab `vimtutor` wrapper UX:
+  - added explicit `-h/--help` support with `usage: vimtutor` output (non-
+    interactive validation path),
+  - prints a one-line "vim tutor: opening ..." message before launching `vi`
+    fallback so students get clear feedback instead of a perceived hang.
+- Updated Lesson 10 exercise-1 hints (source + web) to recommend `vimtutor -h`
+  or `command -v vimtutor` when fullscreen interaction is awkward.
+- Further simplified Lesson 10 exercise 1 validation: it no longer watches the
+  interactive session. The exercise now asks students to run `vimtutor` for
+  practice and, upon exit, run `command -v vimtutor`; the validator only checks
+  that the binary exists (`output_contains: vimtutor`), acknowledging that the
+  actual tutoring happens outside the grader.
+- Replaced the repeated wrapper logic with a self-contained, interactive
+  `vimtutor` experience stored under `/usr/local/share/vimtutor/vimtutor.txt`.
+  The wrapper now creates that file (with navigation/edit drills) and launches
+  `vim` directly against it, printing a short banner so students see progress.
+- Reverted to the upstream Vim `vimtutor` launcher:
+  - copied `/usr/bin/vimtutor` and the entire `/usr/share/vim/vim91/tutor`
+    tree from the host into `rootfs-overlay`,
+  - the script now behaves just like the official tutorial (copies a tutor
+    file and launches Vim), so students see the real interactive experience.
 
 ## Local Dev
 - Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`

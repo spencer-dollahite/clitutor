@@ -71,7 +71,7 @@ export class OutputValidator {
   private checkOutputRegex(result: CommandResult, expected: string): ValidationResult {
     const combined = result.stdout + result.stderr;
     try {
-      if (new RegExp(expected).test(combined)) return ok();
+      if (this.compileRegex(expected).test(combined)) return ok();
     } catch {
       return fail("Invalid regex pattern.");
     }
@@ -140,7 +140,7 @@ export class OutputValidator {
   private checkCwdRegex(expected: string, cwd: string): ValidationResult {
     if (!cwd) return fail("Cannot determine current directory.");
     try {
-      if (new RegExp(expected).test(cwd)) return ok();
+      if (this.compileRegex(expected).test(cwd)) return ok();
     } catch {
       return fail("Invalid regex pattern.");
     }
@@ -160,5 +160,28 @@ export class OutputValidator {
       paths.push(`${cwd}/${filename}`);
     }
     return paths;
+  }
+
+  /**
+   * Accept legacy Python-style patterns (`(?i)foo`) and JS-delimited forms
+   * (`/foo/i`) in lesson metadata.
+   */
+  private compileRegex(expected: string): RegExp {
+    const pattern = expected.trim();
+
+    const delimited = pattern.match(/^\/([\s\S]*)\/([a-z]*)$/i);
+    if (delimited) {
+      const [, body, flags] = delimited;
+      return new RegExp(body, flags);
+    }
+
+    let body = pattern;
+    let flags = "";
+    if (body.startsWith("(?i)")) {
+      body = body.slice(4);
+      flags = "i";
+    }
+
+    return new RegExp(body, flags);
   }
 }
