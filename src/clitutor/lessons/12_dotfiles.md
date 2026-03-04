@@ -13,7 +13,7 @@ with a `.` (dot), which makes them hidden from normal directory listings.
 | `~/.profile` | Generic login shell config |
 | `~/.bash_aliases` | Custom alias definitions (sourced by .bashrc) |
 | `~/.bash_history` | Command history |
-| `~/.vimrc` | Vim editor configuration |
+| `~/.vimrc` | vi/vim editor configuration |
 | `~/.tmux.conf` | tmux configuration |
 | `~/.gitconfig` | Git global configuration |
 | `~/.ssh/config` | SSH connection shortcuts |
@@ -81,7 +81,7 @@ expected: my_bashrc::alias ll=
 hints:
   - "Write typical bashrc content including an alias."
   - "Use printf or echo with redirection."
-  - "Type: `printf '# My custom bashrc\\nalias ll=\"ls -la\"\\nalias gs=\"git status\"\\nexport EDITOR=vim\\n' > my_bashrc`"
+  - "Type: `printf '# My custom bashrc\\nalias ll=\"ls -la\"\\nalias gs=\"git status\"\\nexport EDITOR=vi\\n' > my_bashrc`"
 -->
 ### Exercise 2: Create a bashrc file
 Create a file called `my_bashrc` with at least one alias definition (e.g., `alias ll="ls -la"`).
@@ -123,8 +123,8 @@ Create a file `myconfig.sh` that prints `myconfig loaded`, then source it to run
 Dotfiles commonly set environment variables that control tool behavior:
 
 ```bash
-export EDITOR=vim            # default text editor
-export VISUAL=vim            # visual editor
+export EDITOR=vi             # default text editor (lighter in this lab VM)
+export VISUAL=vi             # visual editor
 export PAGER=less            # default pager
 export LANG=en_US.UTF-8      # locale
 export HISTSIZE=10000         # history size

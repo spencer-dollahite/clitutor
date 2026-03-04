@@ -45,6 +45,19 @@
 - Added sandbox startup guard in generated bashrc (web VM + TUI template) to
   ensure `/etc/hosts` contains `127.0.0.1 localhost`, so `ping localhost`
   resolves reliably in networking exercises.
+- Extended sandbox startup host aliasing for networking labs so
+  `gateway.fleet.mil` and `cic-display.local` also resolve to `127.0.0.1`
+  (in addition to `localhost`) for deterministic offline behavior.
+- Updated Lesson 07 networking copy (both TUI + web lesson files) with an
+  explicit "lab realism" note that these fleet hostnames are simulated aliases
+  mapped locally, while networking principles remain real.
+- Added nginx overlay config at
+  `clitutor-web/build/rootfs-overlay/etc/nginx/http.d/default.conf` so unknown
+  paths fall back to `/index.html` instead of 404, making exploratory `curl`
+  to arbitrary lab endpoints return the dashboard page.
+- Relaxed Lesson 07 exercise 3 validation from strict `output_contains: HTTP`
+  to regex accepting either header output (`HTTP`) or dashboard body output
+  (`Fleet Shore Station Monitor`) to support multiple valid `curl` workflows.
 - Lesson 05 prompt exercise 2 validation was relaxed from literal
   `output_contains: "PS1"` to a regex that accepts either:
   - `echo "PS1=$PS1"` style output, or

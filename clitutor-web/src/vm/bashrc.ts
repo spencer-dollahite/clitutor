@@ -64,10 +64,12 @@ set -o ignoreeof
 # No history file in sandbox
 unset HISTFILE
 
-# Ensure localhost resolves inside the VM (network lesson relies on this)
-if ! grep -Eq '^[[:space:]]*127\\.0\\.0\\.1[[:space:]]+localhost([[:space:]]|$)' /etc/hosts 2>/dev/null; then
-    echo '127.0.0.1 localhost' >> /etc/hosts
-fi
+# Ensure lab host aliases resolve locally for networking exercises
+for _h in localhost gateway.fleet.mil cic-display.local; do
+    if ! grep -Eq "(^|[[:space:]])$_h([[:space:]]|$)" /etc/hosts 2>/dev/null; then
+        echo "127.0.0.1 $_h" >> /etc/hosts
+    fi
+done
 
 cd "${sandboxPath}"
 `;

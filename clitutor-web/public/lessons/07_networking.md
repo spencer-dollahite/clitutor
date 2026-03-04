@@ -46,12 +46,17 @@ Display all network interfaces and their IP addresses.
 
 ```bash
 ping -c 4 gateway.fleet.mil   # send 4 pings then stop
-ping -c 1 192.168.1.1         # single ping
-ping -c 1 -W 2 10.0.0.1       # timeout after 2 seconds
+ping -c 1 192.168.1.1      # single ping
+ping -c 1 -W 2 10.0.0.1    # timeout after 2 seconds
 ```
 
 > **Note:** Some networks block ICMP, so a failed ping does not always mean the
 > host is down.
+>
+> **Lab realism note:** In this training environment, hostnames like
+> `gateway.fleet.mil` are intentionally mapped to local loopback
+> (`127.0.0.1`) so exercises are deterministic and work offline. The commands
+> and troubleshooting principles are real; the target service is simulated.
 
 <!-- exercise
 id: ex02
@@ -62,95 +67,94 @@ sandbox_setup: null
 validation_type: output_contains
 expected: "1 received"
 hints:
-  - "Ping the local machine with a limited count."
-  - "Use -c to specify the number of pings. Localhost is 127.0.0.1."
-  - "Type: `ping -c 1 127.0.0.1`"
+  - "Ping a local target with a limited count."
+  - "Use -c to specify the number of pings. In this lab, gateway.fleet.mil maps to 127.0.0.1."
+  - "Type: `ping -c 1 gateway.fleet.mil` (or `ping -c 1 127.0.0.1`)"
 -->
 ### Exercise 2: Ping localhost
-Send a single ping to localhost (127.0.0.1) and confirm it is received.
+Send a single ping to the lab gateway alias and confirm it is received.
 
 ---
 
-## `curl` and `wget` -- Transfer Data
+## `curl`, `wget`, and `lynx` -- Transfer and View Data
 
 `curl` and `wget` download files and interact with web services:
 
 ```bash
 # curl - transfer data from/to a server
-curl http://localhost                   # fetch a page from a local server
-curl -o file.html http://localhost      # save to file
-curl -I http://localhost                # headers only
-curl -s http://localhost                # silent mode (no progress)
+curl http://gateway.fleet.mil               # fetch a page from a lab host alias
+curl -o file.html http://gateway.fleet.mil  # save to file
+curl -I http://gateway.fleet.mil            # headers only
+curl -s http://gateway.fleet.mil            # silent mode (no progress)
 
 # wget - download files
-wget http://localhost/index.html        # download a file
-wget -q -O- http://localhost           # quiet, output to stdout
+wget http://gateway.fleet.mil/index.html # download a file
+wget -q -O- http://gateway.fleet.mil    # quiet, output to stdout
+
+# lynx - text browser (great for terminal-only environments)
+lynx http://gateway.fleet.mil
+lynx -dump http://gateway.fleet.mil      # non-interactive text output
 ```
+
+In this browser-based lab VM, `lynx` gives you a quick way to inspect pages in
+plain text without leaving the terminal.
 
 `curl` is especially useful for working with APIs:
 
 ```bash
 curl -X POST -H "Content-Type: application/json" \
      -d '{"key":"value"}' \
-     http://localhost/api/endpoint
+     http://gateway.fleet.mil/api/endpoint
 ```
 
 <!-- exercise
 id: ex03
-title: Fetch HTTP headers from the local web server
+title: Fetch HTTP headers from the lab web service
 xp: 15
 difficulty: 2
 sandbox_setup: null
-validation_type: output_contains
-expected: HTTP
+validation_type: output_regex
+expected: "(HTTP|Fleet Shore Station Monitor)"
 hints:
-  - "Use curl with a flag that shows only the response headers."
-  - "The -I flag fetches HTTP headers only. Use -s for silent mode."
-  - "Type: `curl -sI http://localhost`"
+  - "Use curl to confirm the lab web service is reachable."
+  - "For headers-only output, use -I. For body output, use plain curl."
+  - "Type: `curl -sI http://gateway.fleet.mil` or `curl -s http://gateway.fleet.mil`"
 -->
-### Exercise 3: Fetch HTTP headers from the local web server
-An nginx web server is running on this system. Fetch only the HTTP response
-headers from `http://localhost` using curl.
+### Exercise 3: Fetch HTTP headers from the lab web service
+Query `http://gateway.fleet.mil` with curl and confirm the service responds
+(via headers or dashboard content).
 
 ---
 
-## DNS Configuration
+## `nslookup` / `dig` -- DNS Lookups
 
-DNS (Domain Name System) translates domain names to IP addresses. Your system's
-DNS resolver configuration lives in `/etc/resolv.conf`:
-
-```bash
-cat /etc/resolv.conf              # view configured DNS servers
-```
-
-The file lists `nameserver` entries -- the DNS servers your system queries when
-resolving domain names. Common public DNS servers include Google (8.8.8.8) and
-Cloudflare (1.1.1.1).
-
-When you have network access, you can query DNS directly with tools like
-`nslookup` and `dig`:
+DNS translates domain names to IP addresses. These tools let you query DNS
+directly:
 
 ```bash
 nslookup example.com              # simple DNS lookup
+nslookup -type=MX example.com     # mail server records
+
 dig example.com                    # detailed DNS query
 dig +short example.com            # just the IP
+dig example.com MX                # mail records
 ```
 
 <!-- exercise
 id: ex04
-title: View DNS resolver configuration
+title: Look up a domain
 xp: 15
 difficulty: 2
 sandbox_setup: null
-validation_type: output_contains
-expected: nameserver
+validation_type: output_regex
+expected: "\\d+\\.\\d+\\.\\d+\\.\\d+"
 hints:
-  - "DNS resolver settings are stored in a system configuration file."
-  - "The file is /etc/resolv.conf. Use cat to view it."
-  - "Type: `cat /etc/resolv.conf`"
+  - "Use a DNS lookup tool to resolve a domain name."
+  - "nslookup is a simple DNS query tool."
+  - "Type: `nslookup example.com`"
 -->
-### Exercise 4: View DNS resolver configuration
-Display the system's DNS resolver configuration to see which nameservers are configured.
+### Exercise 4: Look up a domain
+Perform a DNS lookup for `example.com`.
 
 ---
 
@@ -161,7 +165,7 @@ Before querying DNS, your system checks `/etc/hosts` for local name mappings:
 ```
 127.0.0.1   localhost
 127.0.1.1   myhostname
-172.16.50.10 shore-server
+192.168.1.10 devserver
 ```
 
 This is useful for:
@@ -247,14 +251,14 @@ xp: 20
 difficulty: 2
 sandbox_setup: null
 validation_type: file_contains
-expected: my_hosts::127.0.0.1 cic-display.local
+expected: my_hosts::127.0.0.1 myapp.local
 hints:
   - "Create a file with a hosts-style entry mapping a hostname to an IP."
   - "Use echo with redirection to write the entry."
-  - "Type: `echo '127.0.0.1 cic-display.local' > my_hosts`"
+  - "Type: `echo '127.0.0.1 myapp.local' > my_hosts`"
 -->
 ### Exercise 7: Write a local hosts entry
-Create a file called `my_hosts` containing a hosts entry that maps `cic-display.local` to `127.0.0.1`.
+Create a file called `my_hosts` containing a hosts entry that maps `myapp.local` to `127.0.0.1`.
 
 ---
 

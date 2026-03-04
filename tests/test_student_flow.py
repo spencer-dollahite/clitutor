@@ -800,6 +800,12 @@ class TestLesson07Networking:
         vr = self.validator.validate(self.lesson.exercises[2], result)
         assert vr.passed
 
+    def test_ex03_curl_body_simulated_correct(self):
+        """Exercise also accepts dashboard body output from plain curl."""
+        result = self.executor.run("echo 'Fleet Shore Station Monitor'")
+        vr = self.validator.validate(self.lesson.exercises[2], result)
+        assert vr.passed
+
     # -- ex04: nslookup — also requires network --
     def test_ex04_nslookup_simulated_correct(self):
         result = self.executor.run("echo 'Address: 93.184.216.34'")
@@ -1236,14 +1242,14 @@ class TestLesson12Dotfiles:
     def test_ex02_bashrc_correct(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[1],
-            """printf '# My custom bashrc\\nalias ll="ls -la"\\nalias gs="git status"\\nexport EDITOR=vim\\n' > my_bashrc""",
+            """printf '# My custom bashrc\\nalias ll="ls -la"\\nalias gs="git status"\\nexport EDITOR=vi\\n' > my_bashrc""",
         )
         assert vr.passed
 
     def test_ex02_no_alias_incorrect(self):
         vr = _run_and_validate(
             self.executor, self.validator, self.lesson.exercises[1],
-            "echo 'export EDITOR=vim' > my_bashrc",
+            "echo 'export EDITOR=vi' > my_bashrc",
         )
         assert not vr.passed
 

@@ -13,7 +13,7 @@ with a `.` (dot), which makes them hidden from normal directory listings.
 | `~/.profile` | Generic login shell config |
 | `~/.bash_aliases` | Custom alias definitions (sourced by .bashrc) |
 | `~/.bash_history` | Command history |
-| `~/.vimrc` | Vim editor configuration |
+| `~/.vimrc` | vi/vim editor configuration |
 | `~/.tmux.conf` | tmux configuration |
 | `~/.gitconfig` | Git global configuration |
 | `~/.ssh/config` | SSH connection shortcuts |
@@ -25,7 +25,7 @@ title: Find dotfiles in home
 xp: 10
 difficulty: 1
 sandbox_setup:
-  - "touch .bashrc .profile .vimrc .fleet_config"
+  - "touch .bashrc .profile .vimrc .hidden_config"
 validation_type: output_contains
 expected: .bashrc
 hints:
@@ -81,7 +81,7 @@ expected: my_bashrc::alias ll=
 hints:
   - "Write typical bashrc content including an alias."
   - "Use printf or echo with redirection."
-  - "Type: `printf '# Fleet admin bashrc\\nalias ll=\"ls -la\"\\nalias sshfleet=\"ssh -F ~/.ssh/fleet_config\"\\nexport EDITOR=vim\\n' > my_bashrc`"
+  - "Type: `printf '# My custom bashrc\\nalias ll=\"ls -la\"\\nalias gs=\"git status\"\\nexport EDITOR=vi\\n' > my_bashrc`"
 -->
 ### Exercise 2: Create a bashrc file
 Create a file called `my_bashrc` with at least one alias definition (e.g., `alias ll="ls -la"`).
@@ -107,14 +107,14 @@ xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: output_contains
-expected: fleet_profile loaded
+expected: myconfig loaded
 hints:
   - "Create a file that echoes a message, then source it."
   - "Use echo to create the file, then source to execute it."
-  - "Type: `echo 'echo \"fleet_profile loaded\"' > myconfig.sh && . ./myconfig.sh`"
+  - "Type: `echo 'echo \"myconfig loaded\"' > myconfig.sh && . ./myconfig.sh`"
 -->
 ### Exercise 3: Create and source a config
-Create a file `myconfig.sh` that prints `fleet_profile loaded`, then source it to run it in the current shell.
+Create a file `myconfig.sh` that prints `myconfig loaded`, then source it to run it in the current shell.
 
 ---
 
@@ -123,8 +123,8 @@ Create a file `myconfig.sh` that prints `fleet_profile loaded`, then source it t
 Dotfiles commonly set environment variables that control tool behavior:
 
 ```bash
-export EDITOR=vim            # default text editor
-export VISUAL=vim            # visual editor
+export EDITOR=vi             # default text editor (lighter in this lab VM)
+export VISUAL=vi             # visual editor
 export PAGER=less            # default pager
 export LANG=en_US.UTF-8      # locale
 export HISTSIZE=10000         # history size
@@ -140,21 +140,21 @@ xp: 10
 difficulty: 1
 sandbox_setup: null
 validation_type: output_contains
-expected: MY_VAR=UNCLASSIFIED
+expected: MY_VAR=hello
 hints:
   - "Export a variable and then display it."
   - "Use export to set the variable, then env or echo to show it."
-  - "Type: `export MY_VAR=UNCLASSIFIED && echo MY_VAR=$MY_VAR`"
+  - "Type: `export MY_VAR=hello && echo MY_VAR=$MY_VAR`"
 -->
 ### Exercise 4: Set and display a variable
-Set an environment variable `MY_VAR` to `UNCLASSIFIED` and print it in the format `MY_VAR=UNCLASSIFIED`.
+Set an environment variable `MY_VAR` to `hello` and print it in the format `MY_VAR=hello`.
 
 ---
 
 ## Managing Dotfiles with Git
 
-Many administrators track their dotfiles in a git repository for backup and
-portability across fleet systems. Common approaches:
+Many developers track their dotfiles in a git repository for backup and
+portability. Common approaches:
 
 ### Simple Symlink Method
 

@@ -54,8 +54,8 @@ ENV KERNEL=virt
 # Core CLI tutorial tools
 RUN apk add --no-cache \
     bash coreutils grep sed gawk findutils diffutils \
-    less file tree curl wget \
-    git vim tmux \
+    less file tree curl wget lynx \
+    git vim vim-doc tmux \
     openssh openssh-keygen \
     net-tools iproute2 iputils bind-tools \
     nginx nmap nmap-scripts tcpdump iptables jq sqlite \
