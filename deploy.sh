@@ -11,11 +11,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEPLOY_DIR="${1:-/var/www/html/clitutor}"
 
-echo "==> Building clitutor-web and VM assets..."
+echo "==> Building clitutor-web (expects `public/v86` already built locally)"
 cd "$SCRIPT_DIR/clitutor-web"
 npm ci --prefer-offline
-npm run build-rootfs
-npm run build-state
 npm run build
 
 echo "==> Deploying to $DEPLOY_DIR"

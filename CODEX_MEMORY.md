@@ -139,10 +139,15 @@
   - the script now behaves just like the official tutorial (copies a tutor
     file and launches Vim), so students see the real interactive experience.
 - Updated `deploy.sh` so VPS deployments rebuild the VM assets and include
-  the `public/v86` directory:
+ the `public/v86` directory:
   1. `npm run build-rootfs` + `npm run build-state` now run before `npm run build`.
   2. After `dist/` is synced, `public/v86/` (whole VM state/rootfs) is rsynced
      to `$DEPLOY_DIR/v86` so production also serves the same VM snapshot.
+- Adjusted `deploy.sh` for VPS targets that cannot run Docker:
+  - the script now only runs `npm run build`, assuming `public/v86` (rootfs + state)
+    was prebuilt locally and committed/pulled before deployment,
+  - `deploy.sh` still rsyncs `public/v86/` into the site so production gets the
+    VM assets without needing a Docker rebuild.
 
 ## Local Dev
 - Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`
