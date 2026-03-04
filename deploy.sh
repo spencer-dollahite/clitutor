@@ -11,13 +11,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEPLOY_DIR="${1:-/var/www/html/clitutor}"
 
-echo "==> Building clitutor-web..."
+echo "==> Building clitutor-web and VM assets..."
 cd "$SCRIPT_DIR/clitutor-web"
 npm ci --prefer-offline
+npm run build-rootfs
+npm run build-state
 npm run build
 
 echo "==> Deploying to $DEPLOY_DIR"
 sudo mkdir -p "$DEPLOY_DIR"
 sudo rsync -a --delete dist/ "$DEPLOY_DIR/"
+echo "==> Syncing VM assets"
+sudo mkdir -p "$DEPLOY_DIR/v86"
+sudo rsync -a --delete public/v86/ "$DEPLOY_DIR/v86/"
 
 echo "==> Done. Site deployed to $DEPLOY_DIR"
