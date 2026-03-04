@@ -49,6 +49,7 @@ export class SentinelCapture {
    */
   private muteSerial = false;
   private pendingMutedSkips = 0;
+  private mutedByteCount = 0;
 
   /**
    * Resolve function for waitForCommand().  Set when a caller is waiting for
@@ -107,6 +108,18 @@ export class SentinelCapture {
         if (this.capturing) {
           this.capturedChunks.push(segment);
         }
+        if (this.muteSerial) {
+          this.mutedByteCount += segment.length;
+          // If we're muted but no internal skipped capture is pending, and
+          // we start seeing substantial command output, this is almost
+          // certainly stale mute state. Recover so interactive apps
+          // (vim/vimtutor/less) remain visible.
+          if (this.pendingMutedSkips === 0 && this.capturing && this.mutedByteCount > 32) {
+            this.muteSerial = false;
+            this.mutedByteCount = 0;
+            console.warn("[SentinelCapture] recovered stale mute from command output");
+          }
+        }
         // When muteSerial is active, suppress stale serial display bytes
         // (old prompt remnants still in the pipeline). Capture data is
         // unaffected so the sentinel state machine stays consistent.
@@ -153,7 +166,15 @@ export class SentinelCapture {
         // Text before the \x1f is safe to display/capture
         const safe = tail.slice(0, sentIdx);
         if (safe) {
-          if (this.capturing) this.capturedChunks.push(safe);
+        if (this.capturing) this.capturedChunks.push(safe);
+          if (this.muteSerial) {
+            this.mutedByteCount += safe.length;
+            if (this.pendingMutedSkips === 0 && this.capturing && this.mutedByteCount > 32) {
+              this.muteSerial = false;
+              this.mutedByteCount = 0;
+              console.warn("[SentinelCapture] recovered stale mute from split command output");
+            }
+          }
           if (!this.muteSerial) displayParts.push(safe);
         }
         // Buffer from \x1f onward for next processOutput call
@@ -170,6 +191,14 @@ export class SentinelCapture {
         }, 50);
       } else {
         if (this.capturing) this.capturedChunks.push(tail);
+        if (this.muteSerial) {
+          this.mutedByteCount += tail.length;
+          if (this.pendingMutedSkips === 0 && this.capturing && this.mutedByteCount > 32) {
+            this.muteSerial = false;
+            this.mutedByteCount = 0;
+            console.warn("[SentinelCapture] recovered stale mute from tail command output");
+          }
+        }
         if (!this.muteSerial) displayParts.push(tail);
       }
     }
@@ -221,6 +250,7 @@ export class SentinelCapture {
       if (this.pendingMutedSkips > 0) {
         this.pendingMutedSkips--;
         this.muteSerial = this.pendingMutedSkips > 0;
+        if (!this.muteSerial) this.mutedByteCount = 0;
         console.log(
           "[SentinelCapture] SKIPPED capture: pendingMutedSkips=%d muteSerial=%s",
           this.pendingMutedSkips,
@@ -306,6 +336,7 @@ export class SentinelCapture {
    */
   muteUntilNextPrompt(): void {
     this.muteSerial = true;
+    this.mutedByteCount = 0;
     console.log("[SentinelCapture] muteUntilNextPrompt: muteSerial=true");
   }
 
@@ -366,6 +397,7 @@ export class SentinelCapture {
     if (!this.muteSerial && this.pendingMutedSkips === 0) return;
     this.muteSerial = false;
     this.pendingMutedSkips = 0;
+    this.mutedByteCount = 0;
     console.warn("[SentinelCapture] recoverMuteAfterTimeout: cleared stale mute");
   }
 }

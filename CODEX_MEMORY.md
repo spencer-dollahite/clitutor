@@ -158,3 +158,5 @@
 - Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`
 - TUI tests (fast subset): `.venv/bin/pytest -q tests/test_validator.py tests/test_loader.py tests/test_executor.py`
 - Docker-backed `test_student_flow.py` requires Docker daemon access.
+
+- Added stale-mute auto-recovery during active command output in `SentinelCapture` (when no internal skipped capture is pending). This unblocks full-screen interactive tools like vim/vimtutor in slower prod timing where mute could remain latched despite matching VM asset hashes.
