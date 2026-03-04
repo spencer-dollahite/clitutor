@@ -484,12 +484,20 @@ export class App {
     } else {
       this.vm.sendSerial("\n");
     }
+    let timedOut = false;
     try {
       await Promise.race([
         this.sentinel.waitForCommand(),
-        new Promise<void>((resolve) => setTimeout(resolve, 1200)),
+        new Promise<void>((resolve) => setTimeout(() => {
+          timedOut = true;
+          resolve();
+        }, 1200)),
       ]);
     } finally {
+      if (timedOut) {
+        console.warn("[prompt-refresh] timeout waiting for CMD_END; recovering mute");
+        this.sentinel.recoverMuteAfterTimeout();
+      }
       this.promptRefreshInFlight = false;
       console.log("[prompt-refresh] done: %s", reason);
     }

@@ -120,6 +120,14 @@ export class SentinelCapture {
       console.log("[SentinelCapture] processOutput: sentinel=%s capturing=%s skipCaptures=%d ready=%s muteSerial=%s",
         sentinelBody.slice(0, 60), this.capturing, this.skipCaptures, this.ready, this.muteSerial);
       if (sentinelBody === CMD_START_SENTINEL) {
+        // Safety: if serial output was muted due to an internal prompt refresh,
+        // seeing a fresh CMD_START means we are at a prompt boundary again.
+        // Clear any stale mute state to avoid permanently hidden output.
+        if (this.muteSerial || this.pendingMutedSkips > 0) {
+          this.muteSerial = false;
+          this.pendingMutedSkips = 0;
+          console.warn("[SentinelCapture] CMD_START recovered stale mute state");
+        }
         this.capturing = true;
         this.capturedChunks = [];
       } else if (sentinelBody.startsWith(CMD_END_SENTINEL + ":")) {
@@ -348,5 +356,16 @@ export class SentinelCapture {
       clearTimeout(this.partialTimer);
       this.partialTimer = null;
     }
+  }
+
+  /**
+   * Force-clear mute state if a caller timed out waiting for an internal
+   * prompt refresh command to complete.
+   */
+  recoverMuteAfterTimeout(): void {
+    if (!this.muteSerial && this.pendingMutedSkips === 0) return;
+    this.muteSerial = false;
+    this.pendingMutedSkips = 0;
+    console.warn("[SentinelCapture] recoverMuteAfterTimeout: cleared stale mute");
   }
 }

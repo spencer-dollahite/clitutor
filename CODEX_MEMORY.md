@@ -148,6 +148,11 @@
     was prebuilt locally and committed/pulled before deployment,
   - `deploy.sh` still rsyncs `public/v86/` into the site so production gets the
     VM assets without needing a Docker rebuild.
+- Hardened serial sentinel mute recovery (prod timing issue):
+  - `SentinelCapture` now clears stale mute state on `CMD_START` boundaries,
+  - added `recoverMuteAfterTimeout()` and wired `App.refreshPrompt()` to call it
+    when the internal prompt-refresh wait times out, preventing hidden terminal
+    output after missed/late sentinels (notably when launching `vimtutor`).
 
 ## Local Dev
 - Web dev server command: `cd clitutor-web && npm run dev -- --host localhost --port 5173`
