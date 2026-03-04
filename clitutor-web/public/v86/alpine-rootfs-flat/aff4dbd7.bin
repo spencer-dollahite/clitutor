@@ -1,0 +1,14 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    root /var/lib/nginx/html;
+    index index.html;
+
+    # Serve files directly when present; otherwise fall back to the lab
+    # dashboard page so exploratory curls to arbitrary paths stay useful.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

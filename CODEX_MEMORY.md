@@ -160,3 +160,5 @@
 - Docker-backed `test_student_flow.py` requires Docker daemon access.
 
 - Added stale-mute auto-recovery during active command output in `SentinelCapture` (when no internal skipped capture is pending). This unblocks full-screen interactive tools like vim/vimtutor in slower prod timing where mute could remain latched despite matching VM asset hashes.
+
+- Fixed production VM chunk 404s by committing missing `public/v86/alpine-rootfs-flat/*.bin` files referenced by `alpine-fs.json` (98 files). This resolves runtime hangs where v86 waits on missing rootfs blocks (e.g., 87292a15.bin).
