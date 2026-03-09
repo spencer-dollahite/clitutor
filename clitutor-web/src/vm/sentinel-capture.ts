@@ -48,6 +48,18 @@ export class SentinelCapture {
    * because they write through a separate path.
    */
   private muteSerial = false;
+
+  /**
+   * When true, ALL serial display and command output is silently discarded.
+   * Unlike muteSerial, frozen state has no recovery mechanism and does NOT
+   * consume skipCaptures slots. Used during the boot→lesson transition to
+   * absorb stale CMD_END sentinels from the seed script's PROMPT_COMMAND
+   * that may arrive after byte-level serial suppression is lifted.
+   *
+   * System messages (via displayQueue) bypass this — they go through
+   * onDisplay directly, not the serial display path.
+   */
+  private frozen = false;
   private pendingMutedSkips = 0;
   private mutedByteCount = 0;
 
@@ -120,10 +132,9 @@ export class SentinelCapture {
             console.warn("[SentinelCapture] recovered stale mute from command output");
           }
         }
-        // When muteSerial is active, suppress stale serial display bytes
-        // (old prompt remnants still in the pipeline). Capture data is
-        // unaffected so the sentinel state machine stays consistent.
-        if (!this.muteSerial) {
+        // When muteSerial or frozen is active, suppress serial display bytes.
+        // Capture data is unaffected so the sentinel state machine stays consistent.
+        if (!this.muteSerial && !this.frozen) {
           displayParts.push(segment);
         }
       }
@@ -175,7 +186,7 @@ export class SentinelCapture {
               console.warn("[SentinelCapture] recovered stale mute from split command output");
             }
           }
-          if (!this.muteSerial) displayParts.push(safe);
+          if (!this.muteSerial && !this.frozen) displayParts.push(safe);
         }
         // Buffer from \x1f onward for next processOutput call
         this.partialBuffer = tail.slice(sentIdx);
@@ -199,7 +210,7 @@ export class SentinelCapture {
             console.warn("[SentinelCapture] recovered stale mute from tail command output");
           }
         }
-        if (!this.muteSerial) displayParts.push(tail);
+        if (!this.muteSerial && !this.frozen) displayParts.push(tail);
       }
     }
 
@@ -239,6 +250,14 @@ export class SentinelCapture {
       const resolve = this.commandWaiter;
       this.commandWaiter = null;
       resolve();
+    }
+
+    // Frozen: silently discard WITHOUT consuming skipCaptures slots.
+    // This absorbs stale CMD_ENDs from the seed script's PROMPT_COMMAND
+    // that arrive after serial suppression is lifted during lesson load.
+    if (this.frozen) {
+      console.log("[SentinelCapture] FROZEN: discarded capture (skipCaptures preserved at %d)", this.skipCaptures);
+      return null;
     }
 
     // Skip internal captures (bash startup)
@@ -341,6 +360,28 @@ export class SentinelCapture {
   }
 
   /**
+   * Freeze the sentinel: silently discard all serial display AND command
+   * output without consuming skipCaptures slots. System messages (via
+   * displayQueue) still work. Call unfreeze() before resuming normal
+   * operation.
+   */
+  freeze(): void {
+    this.frozen = true;
+    console.log("[SentinelCapture] freeze: discarding all serial output");
+  }
+
+  /**
+   * Unfreeze the sentinel: resume normal display and command processing.
+   * Clears any stale captured data accumulated during the frozen window.
+   */
+  unfreeze(): void {
+    if (!this.frozen) return;
+    this.frozen = false;
+    this.capturedChunks = [];
+    console.log("[SentinelCapture] unfreeze: resuming normal operation");
+  }
+
+  /**
    * Returns a Promise that resolves when the next CMD_END sentinel is
    * processed by finishCapture.  Used to wait for shell command completion
    * (e.g. seed scripts) without hardcoded timers.
@@ -374,6 +415,7 @@ export class SentinelCapture {
     this.skipCaptures = 1;
     this.ready = false;
     this.muteSerial = false;
+    this.frozen = false;
     this.pendingMutedSkips = 0;
     this.commandWaiter = null;
     this.pendingMessages = [];

@@ -138,8 +138,11 @@ export class App {
     const lesson = await this.loader.loadLesson(meta);
     await this.seedLessonSetup(lesson);
 
-    // Lift serial suppression — this entire block is synchronous (no event
-    // loop yields), so no stale bytes can sneak in between steps.
+    // Freeze the sentinel before lifting serial suppression.  The seed
+    // script's final PROMPT_COMMAND (CMD_END + CMD_START) may still be in
+    // the serial pipeline — freeze silently absorbs it without consuming
+    // skipCaptures slots that refreshPrompt needs later.
+    this.sentinel.freeze();
     this.clearSerialBuffer?.();
     this.terminalPane?.term.clear();
     this.serialSuppressed = false;
@@ -816,6 +819,7 @@ export class App {
     // seedLessonSetup enables byte-level suppression — lift after clear.
     if (!preloaded) {
       await this.seedLessonSetup(lesson, true);
+      this.sentinel.freeze();
       this.clearSerialBuffer?.();
       this.terminalPane?.term.clear();
       this.serialSuppressed = false;
@@ -854,6 +858,11 @@ export class App {
       // Wait for sidebar refit (scheduled at 350ms) so any pending terminal
       // resize sync can be coalesced into this single prompt-refresh command.
       await new Promise<void>((resolve) => setTimeout(resolve, 380));
+
+      // Unfreeze the sentinel now that the 380ms window has absorbed any
+      // stale CMD_END from the seed script's PROMPT_COMMAND.  refreshPrompt
+      // adds its own mute+skip for the stty/prompt-kick command.
+      this.sentinel.unfreeze();
       console.log("[openLessonByMeta] refreshPrompt");
       await this.refreshPrompt("open-lesson");
 
@@ -1009,12 +1018,14 @@ export class App {
     if (!this.vm || !this.currentLesson) return;
     // seedLessonSetup enables byte-level suppression — lift after clear
     await this.seedLessonSetup(this.currentLesson, true);
+    this.sentinel.freeze();
     this.clearSerialBuffer?.();
     this.terminalPane?.term.clear();
     this.serialSuppressed = false;
     this.seeding = false;
     this.restoreDisplay();
     this.sentinel.queueSystemMessage("Sandbox reset.");
+    this.sentinel.unfreeze();
     void this.refreshPrompt("reset-sandbox");
   }
 
