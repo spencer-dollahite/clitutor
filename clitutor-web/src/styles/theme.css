@@ -320,6 +320,119 @@ html, body {
   background: rgba(245, 158, 11, 0.1);
 }
 
+/* TTS read-aloud button (exercise bar) */
+.tts-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tts-btn:hover {
+  background: rgba(0, 212, 170, 0.1);
+}
+
+.tts-btn.speaking {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.tts-btn.speaking:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.tts-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tts-speed-btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.15s;
+}
+
+.tts-speed-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.tts-rate-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 32px;
+  text-align: center;
+}
+
+/* TTS buttons — sidebar */
+.tts-sidebar-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tts-sidebar-btn:hover {
+  color: var(--text-muted);
+  border-color: var(--text-muted);
+}
+
+.tts-sidebar-btn.speaking {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* Auto-read toggle (sidebar, same pattern as auto-follow) */
+.auto-read-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.auto-read-btn:hover {
+  color: var(--text-muted);
+  border-color: var(--text-muted);
+}
+
+.auto-read-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.auto-read-btn.active:hover {
+  color: var(--accent-dim);
+  border-color: var(--accent-dim);
+}
+
 /* ── Status Bar (bottom) ──────────────────────────────────── */
 .status-bar {
   display: flex;

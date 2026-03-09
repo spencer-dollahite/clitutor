@@ -6,7 +6,7 @@
  * Lesson content lives in a collapsible sidebar panel.
  */
 
-import type { LessonMeta, LessonData, CommandResult } from "../core/models";
+import type { LessonMeta, LessonData, CommandResult, Exercise } from "../core/models";
 import { LessonLoader } from "../core/lesson-loader";
 import { ProgressManager } from "../core/progress";
 import { LinuxVM } from "../vm/linux-vm";
@@ -19,6 +19,7 @@ import { NextStepsGuide } from "./components/next-steps-guide";
 import { HintOverlay } from "./components/hint-overlay";
 import { LessonPicker } from "./screens/lesson-picker";
 import { showToast } from "./toast";
+import { TTSService } from "../core/tts";
 
 export class App {
   private root: HTMLElement;
@@ -31,6 +32,7 @@ export class App {
   private markdownPane: MarkdownPane | null = null;
   private nextStepsGuide: NextStepsGuide | null = null;
   private hintOverlay: HintOverlay;
+  private tts: TTSService;
   private picker: LessonPicker | null = null;
   private static readonly NEXT_STEPS_LESSON_ID = "14_next_steps";
 
@@ -70,6 +72,8 @@ export class App {
     this.progress = new ProgressManager();
     this.sentinel = new SentinelCapture();
     this.hintOverlay = new HintOverlay();
+    this.tts = new TTSService();
+    this.tts.onStateChange = () => this.updateTTSButtons();
   }
 
   async start(): Promise<void> {
@@ -153,6 +157,8 @@ export class App {
   }
 
   private backToPicker(): void {
+    this.tts.stop();
+
     // Destroy VM
     if (this.vm) {
       this.vm.destroy();
@@ -604,6 +610,9 @@ export class App {
         const next = this.currentLesson.exercises[this.currentExercise];
         this.sentinel.queueSystemMessage(`Next: ${next.title}`);
         this.autoScrollToExercise();
+        if (this.tts.getAutoRead()) {
+          this.tts.speak(this.getExerciseSpeechText(next));
+        }
       } else {
         this.sentinel.queueSystemMessage(
           `\u2605 Lesson complete: ${this.currentLesson.title}! Type /lessons for more.`,
@@ -726,6 +735,7 @@ export class App {
   // ── Lesson management ─────────────────────────────────────────────
 
   private showLessonList(): void {
+    this.tts.stop();
     this.sidebarMode = "lessons";
     if (!this.sidebarContent) return;
 
@@ -834,6 +844,11 @@ export class App {
       this.sentinel.queueSystemMessage("All exercises complete!");
     }
 
+      // Auto-read first exercise if enabled
+      if (this.tts.getAutoRead() && this.currentExercise < lesson.exercises.length) {
+        this.tts.speak(this.getExerciseSpeechText(lesson.exercises[this.currentExercise]));
+      }
+
       // Trigger fresh prompt after messages — mute stale serial bytes until
       // the kicked \n produces CMD_START for the fresh prompt.
       // Wait for sidebar refit (scheduled at 350ms) so any pending terminal
@@ -853,11 +868,16 @@ export class App {
 
     // Clear and render markdown
     const followClass = this.autoFollow ? "auto-follow-btn active" : "auto-follow-btn";
+    const autoReadClass = this.tts.getAutoRead() ? "auto-read-btn active" : "auto-read-btn";
     this.sidebarContent.innerHTML = `
       <div class="sidebar-lesson-header">
         <button class="btn sidebar-back" id="sidebar-back">\u2190 All Lessons</button>
-        <button class="btn ${followClass}" id="auto-follow-toggle"
-                title="Auto-scroll to active exercise">\u21F5 Follow</button>
+        <span style="display:flex;gap:4px">
+          <button class="btn tts-sidebar-btn" id="tts-sidebar-btn" title="Read lesson aloud">\u25B6 Read</button>
+          <button class="btn ${autoReadClass}" id="auto-read-toggle" title="Auto-read exercises">Auto</button>
+          <button class="btn ${followClass}" id="auto-follow-toggle"
+                  title="Auto-scroll to active exercise">\u21F5 Follow</button>
+        </span>
       </div>
       <div class="sidebar-markdown"></div>
     `;
@@ -872,6 +892,20 @@ export class App {
       localStorage.setItem(App.AUTO_FOLLOW_KEY, String(this.autoFollow));
       followBtn.classList.toggle("active", this.autoFollow);
       if (this.autoFollow) this.autoScrollToExercise();
+    });
+
+    const ttsSidebarBtn = this.sidebarContent.querySelector("#tts-sidebar-btn")!;
+    ttsSidebarBtn.addEventListener("click", () => {
+      if (this.currentLesson) {
+        this.tts.toggle(this.getLessonSpeechText(this.currentLesson.content_markdown));
+      }
+    });
+
+    const autoReadBtn = this.sidebarContent.querySelector("#auto-read-toggle")!;
+    autoReadBtn.addEventListener("click", () => {
+      const on = !this.tts.getAutoRead();
+      this.tts.setAutoRead(on);
+      autoReadBtn.classList.toggle("active", on);
     });
 
     const mdContainer = this.sidebarContent.querySelector(".sidebar-markdown")!;
@@ -1098,11 +1132,28 @@ export class App {
       }</span>
       ${ex ? `<span class="exercise-xp-label">${ex.xp} XP</span>` : ""}
       ${ex ? '<button class="hint-btn" id="hint-btn">/hint</button>' : ""}
+      ${ex ? `<span class="tts-controls">
+        <button class="tts-speed-btn" id="tts-slower" title="Slower">&minus;</button>
+        <button class="tts-btn${this.tts.isSpeaking() ? " speaking" : ""}" id="tts-exercise-btn" title="Read exercise aloud">${this.tts.isSpeaking() ? "\u23F9" : "\u25B6"}</button>
+        <button class="tts-speed-btn" id="tts-faster" title="Faster">&plus;</button>
+        <span class="tts-rate-label" id="tts-rate-label">${this.tts.getRate().toFixed(2)}x</span>
+      </span>` : ""}
     `;
 
     this.exerciseBar.querySelector("#hint-btn")?.addEventListener("click", () =>
       this.showHint(),
     );
+    this.exerciseBar.querySelector("#tts-exercise-btn")?.addEventListener("click", () => {
+      if (ex) this.tts.toggle(this.getRemainingExercisesSpeechText());
+    });
+    this.exerciseBar.querySelector("#tts-slower")?.addEventListener("click", () => {
+      this.tts.slower();
+      this.updateRateLabel();
+    });
+    this.exerciseBar.querySelector("#tts-faster")?.addEventListener("click", () => {
+      this.tts.faster();
+      this.updateRateLabel();
+    });
   }
 
   private updateStatusBar(): void {
@@ -1132,5 +1183,56 @@ export class App {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // ── TTS helpers ──────────────────────────────────────────────
+
+  /** Build speech text for an exercise: title + first hint (no spoilers). */
+  private getExerciseSpeechText(exercise: Exercise): string {
+    let text = `Exercise: ${exercise.title}.`;
+    if (exercise.hints.length > 0) {
+      text += ` Hint: ${exercise.hints[0]}`;
+    }
+    return text;
+  }
+
+  /** Build speech text from the current exercise through all remaining. */
+  private getRemainingExercisesSpeechText(): string {
+    if (!this.currentLesson) return "";
+    const parts: string[] = [];
+    for (let i = this.currentExercise; i < this.currentLesson.exercises.length; i++) {
+      parts.push(this.getExerciseSpeechText(this.currentLesson.exercises[i]));
+    }
+    return parts.join(" ");
+  }
+
+  /** Strip code blocks, inline code, and markdown formatting for TTS. */
+  private getLessonSpeechText(markdown: string): string {
+    // TTSService.prepareText handles stripping internally via speak()
+    return markdown;
+  }
+
+  private updateRateLabel(): void {
+    const el = document.getElementById("tts-rate-label");
+    if (el) el.textContent = `${this.tts.getRate().toFixed(2)}x`;
+  }
+
+  /** Update all TTS button states (called via onStateChange callback). */
+  private updateTTSButtons(): void {
+    const speaking = this.tts.isSpeaking();
+
+    // Exercise bar button
+    const exBtn = document.getElementById("tts-exercise-btn");
+    if (exBtn) {
+      exBtn.textContent = speaking ? "\u23F9" : "\u25B6";
+      exBtn.classList.toggle("speaking", speaking);
+    }
+
+    // Sidebar button
+    const sideBtn = document.getElementById("tts-sidebar-btn");
+    if (sideBtn) {
+      sideBtn.textContent = speaking ? "\u23F9 Stop" : "\u25B6 Read";
+      sideBtn.classList.toggle("speaking", speaking);
+    }
   }
 }
