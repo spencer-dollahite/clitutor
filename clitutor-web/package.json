@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "build-rootfs": "bash build/build-rootfs.sh",
-    "build-state": "node build/build-state.js"
+    "build-state": "node build/build-state.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "typescript": "^5.7.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vitest": "^4.0.18"
   }
 }
