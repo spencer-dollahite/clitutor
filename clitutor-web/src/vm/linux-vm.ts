@@ -239,6 +239,18 @@ export class LinuxVM {
 
   async fileExists(path: string): Promise<boolean> {
     if (!this.emulator) return false;
+
+    // Walk the host-side 9p inode tree rather than read_file(): v86's
+    // read_file() rejects for zero-byte files (no inodedata, not on
+    // storage), so a freshly touch'd file would look nonexistent.
+    const fs = this.get9pFs();
+    if (fs) {
+      const result = fs.SearchPath(path);
+      if (!result || result.id === -1) return false;
+      const mode = fs.GetInode(result.id)?.mode ?? 0;
+      return (mode & 0xf000) === 0x8000; // S_IFREG
+    }
+
     try {
       await this.emulator.read_file(path);
       return true;
