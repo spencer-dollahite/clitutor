@@ -40,6 +40,17 @@ interface ProgressData {
 export class ProgressManager {
   private lessons: Record<string, LessonProgress> = {};
   private db: IDBDatabase | null = null;
+  /** Expected exercise count per lesson id (from metadata.json). */
+  private expectedCounts: Record<string, number> = {};
+
+  /**
+   * Provide metadata exercise counts so lesson completion compares against
+   * the lesson's real size — recorded entries alone always read "complete"
+   * (only completed exercises are ever recorded).
+   */
+  setExerciseCounts(counts: Record<string, number>): void {
+    this.expectedCounts = counts;
+  }
 
   async init(): Promise<void> {
     this.db = await this.openDB();
@@ -125,7 +136,11 @@ export class ProgressManager {
   get completedLessons(): Set<string> {
     const set = new Set<string>();
     for (const [id, lp] of Object.entries(this.lessons)) {
-      if (isLessonCompleted(lp)) set.add(id);
+      const expected = this.expectedCounts[id];
+      const complete = expected != null
+        ? lessonCompletedCount(lp) >= expected
+        : isLessonCompleted(lp);
+      if (complete) set.add(id);
     }
     return set;
   }

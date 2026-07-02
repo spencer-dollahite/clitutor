@@ -32,7 +32,7 @@
       "category": "system admin",
       "difficulty": 2,
       "description": "Understand Linux file permissions, ownership, and access control",
-      "xp": 110,
+      "xp": 105,
       "exercise_count": 7,
       "file": "02_permissions.md"
     },
@@ -45,7 +45,7 @@
       "difficulty": 2,
       "description": "Boost productivity with history, shortcuts, and job control",
       "xp": 100,
-      "exercise_count": 7,
+      "exercise_count": 8,
       "file": "03_tips_and_tricks.md"
     },
     {
@@ -56,7 +56,7 @@
       "category": "system",
       "difficulty": 2,
       "description": "Understand how the shell finds and executes commands via PATH",
-      "xp": 90,
+      "xp": 75,
       "exercise_count": 6,
       "file": "04_path.md"
     },
@@ -68,7 +68,7 @@
       "category": "customization",
       "difficulty": 2,
       "description": "Customize your bash prompt with PS1 and escape sequences",
-      "xp": 80,
+      "xp": 65,
       "exercise_count": 5,
       "file": "05_prompt.md"
     },
@@ -92,7 +92,7 @@
       "category": "networking",
       "difficulty": 3,
       "description": "Use curl, ping, ip, nslookup, and other networking commands",
-      "xp": 130,
+      "xp": 95,
       "exercise_count": 7,
       "file": "07_networking.md"
     },
@@ -104,7 +104,7 @@
       "category": "networking",
       "difficulty": 3,
       "description": "Secure Shell basics including key generation and config files",
-      "xp": 110,
+      "xp": 85,
       "exercise_count": 6,
       "file": "08_ssh.md"
     },
@@ -116,7 +116,7 @@
       "category": "tools",
       "difficulty": 3,
       "description": "Learn git fundamentals: init, add, commit, branch, merge, and log",
-      "xp": 140,
+      "xp": 120,
       "exercise_count": 8,
       "file": "09_git.md"
     },
@@ -128,7 +128,7 @@
       "category": "tools",
       "difficulty": 3,
       "description": "Manage multiple terminal sessions with tmux",
-      "xp": 110,
+      "xp": 95,
       "exercise_count": 6,
       "file": "11_tmux.md"
     },
@@ -140,7 +140,7 @@
       "category": "customization",
       "difficulty": 2,
       "description": "Understand and manage hidden configuration files",
-      "xp": 90,
+      "xp": 80,
       "exercise_count": 6,
       "file": "12_dotfiles.md"
     },
@@ -164,7 +164,7 @@
       "category": "tools",
       "difficulty": 2,
       "description": "Navigate and edit files using vi/vim modal editing",
-      "xp": 100,
+      "xp": 75,
       "exercise_count": 6,
       "file": "10_vi.md"
     },

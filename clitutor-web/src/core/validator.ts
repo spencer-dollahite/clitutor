@@ -96,8 +96,13 @@ export class OutputValidator {
   }
 
   private async checkFileContains(expected: string, cwd: string): Promise<ValidationResult> {
-    if (!expected.includes("::")) return fail("Invalid file_contains spec.");
-    const [filename, content] = expected.split("::", 2);
+    // Split on the FIRST "::" only — JS split(sep, 2) truncates the rest,
+    // which would silently drop content containing "::".
+    const sep = expected.indexOf("::");
+    if (sep === -1) return fail("Invalid file_contains spec.");
+    const filename = expected.slice(0, sep);
+    const content = expected.slice(sep + 2);
+    if (!content.trim()) return fail("Invalid file_contains spec (empty content).");
     const paths = this.resolvePaths(filename.trim(), cwd);
 
     for (const p of paths) {

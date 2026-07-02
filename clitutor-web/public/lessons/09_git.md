@@ -20,6 +20,8 @@ title: Initialize a git repository
 xp: 15
 difficulty: 2
 sandbox_setup: null
+solution_setup:
+  - "git init -q -b main network-configs"
 validation_type: output_contains
 expected: Initialized
 hints:
@@ -59,6 +61,8 @@ title: Add and check status
 xp: 15
 difficulty: 2
 sandbox_setup: null
+solution_setup:
+  - "cd network-configs && touch README.md && git add README.md"
 validation_type: output_contains
 expected: new file
 hints:
@@ -90,6 +94,8 @@ title: Make your first commit
 xp: 20
 difficulty: 2
 sandbox_setup: null
+solution_setup:
+  - "cd network-configs && git config user.name student && git config user.email student@clitutor && git commit -q -m 'initial baseline config'"
 validation_type: output_contains
 expected: "initial baseline config"
 hints:
@@ -149,6 +155,8 @@ title: Create and switch to a branch
 xp: 15
 difficulty: 3
 sandbox_setup: null
+solution_setup:
+  - "cd network-configs && git checkout -q -B patch-firewall-rules"
 validation_type: output_contains
 expected: patch-firewall-rules
 hints:
@@ -184,6 +192,8 @@ title: Merge a branch
 xp: 20
 difficulty: 3
 sandbox_setup: null
+solution_setup:
+  - "cd network-configs && echo 'ACCEPT TCP/8443 0.0.0.0/0' > firewall_patch.txt && git add firewall_patch.txt && git commit -q -m 'add HTTPS alt port rule' && git checkout -q main && git merge -q patch-firewall-rules"
 validation_type: output_contains
 expected: firewall_patch.txt
 hints:
@@ -215,6 +225,8 @@ title: Configure git user
 xp: 10
 difficulty: 2
 sandbox_setup: null
+solution_setup:
+  - "cd network-configs && git config user.name operator"
 validation_type: output_contains
 expected: operator
 hints:
@@ -247,6 +259,8 @@ title: Create a .gitignore
 xp: 15
 difficulty: 2
 sandbox_setup: null
+solution_setup:
+  - "cd network-configs && { echo '*.log'; echo '*.pcap'; echo '.env'; echo 'credentials/'; } > .gitignore"
 validation_type: file_contains
 expected: .gitignore::*.log
 hints:

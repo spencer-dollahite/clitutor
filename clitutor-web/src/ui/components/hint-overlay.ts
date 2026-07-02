@@ -28,7 +28,10 @@ export class HintOverlay {
 
   show(exercise: Exercise): void {
     const hintsAvailable = exercise.hints.length;
-    const hintsToShow = Math.min(exercise.hints_used + 1, hintsAvailable);
+    // hints_used was already incremented by the caller — show exactly that
+    // many, so each /hint press reveals ONE more hint and the penalty tier
+    // shown matches what calculateXp will actually charge.
+    const hintsToShow = Math.min(exercise.hints_used, hintsAvailable);
 
     if (hintsToShow === 0) {
       // No hints available

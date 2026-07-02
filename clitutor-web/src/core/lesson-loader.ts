@@ -63,14 +63,17 @@ export class LessonLoader {
               xp: Number(data.xp ?? 10),
               difficulty: Number(data.difficulty ?? 1),
               sandbox_setup: (data.sandbox_setup as string[] | null) ?? null,
+              solution_setup: (data.solution_setup as string[] | null) ?? null,
               validation_type: String(data.validation_type ?? "output_contains"),
               expected: String(data.expected ?? ""),
               hints: Array.isArray(data.hints) ? data.hints.map(String) : [],
             }),
           );
         }
-      } catch {
-        // Skip malformed YAML
+      } catch (err) {
+        // Skip malformed YAML — but say so, or the lesson silently has
+        // fewer exercises than metadata.json claims.
+        console.warn("[LessonLoader] skipping malformed exercise block:", err);
         continue;
       }
     }

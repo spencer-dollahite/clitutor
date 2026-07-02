@@ -6,6 +6,13 @@ export interface Exercise {
   xp: number;
   difficulty: number;
   sandbox_setup: string[] | null;
+  /**
+   * Commands that recreate the state this exercise's SOLUTION produces.
+   * Replayed at lesson load only for already-completed exercises, so
+   * later exercises that build on earlier ones survive a page reload
+   * (the VM always boots pristine from the snapshot).
+   */
+  solution_setup: string[] | null;
   validation_type: string;
   expected: string;
   hints: string[];
@@ -22,6 +29,7 @@ export function createExercise(partial: Partial<Exercise> & { id: string; title:
     xp: 10,
     difficulty: 1,
     sandbox_setup: null,
+    solution_setup: null,
     validation_type: "output_contains",
     expected: "",
     hints: [],

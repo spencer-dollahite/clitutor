@@ -27,7 +27,7 @@ clitutor-web/src/
     xp.ts                      # 17 levels ("Newbie"→"BDFL"), hint/difficulty/first-try modifiers
 
   vm/
-    linux-vm.ts                # v86 wrapper: boot, serial I/O, 9p filesystem, execCommand
+    linux-vm.ts                # v86 wrapper: boot, serial I/O, 9p filesystem queries, respawn detection
     sentinel-capture.ts        # Serial stream state machine: sentinel extraction, ANSI strip
     bashrc.ts                  # Generates .clitutor_bashrc with sentinel PROMPT_COMMAND
 
@@ -54,7 +54,7 @@ public/
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| VM | v86 ^0.5.319 | x86 emulator → Alpine Linux 3.18.6 i386 in browser |
+| VM | v86 ^0.5.319 | x86 emulator → Alpine Linux 3.21 i386 (GNU coreutils/grep/sed/gawk/findutils + bash) in browser |
 | Terminal | @xterm/xterm ^5.5.0 | Terminal display with fit + web-links addons |
 | Build | Vite ^6.0.0 + TypeScript ^5.7 | Dev server, bundling, COOP/COEP headers |
 | Markdown | marked ^15.0.0 + highlight.js ^11.11 | Lesson content rendering |
@@ -100,7 +100,8 @@ Sentinel char: `\x1f` (Unit Separator). SentinelCapture state machine tracks
 2. `if (!currentLesson) return` — no lesson loaded
 3. `if (exerciseIndex >= exercises.length) return` — past last exercise
 4. `if (exercise.completed) return` — already done
-5. For output-based types: `if (stdout==='' && rc===0) return` — empty Enter
+5. For output-based types: `if (stdout==='') return` — empty Enter / Ctrl+C (130) / Ctrl+Z (148)
+6. For `cwd_regex`: failing look-around commands (output produced, cwd unchanged) are not counted as attempts
 
 ## Validation Types
 
@@ -113,8 +114,8 @@ Sentinel char: `\x1f` (Unit Separator). SentinelCapture state machine tracks
 | `cwd_regex` | `RegExp(expected).test(cwd)` | Working directory |
 | `file_exists` | `vm.fileExists(path)` | Checks /home/student + cwd |
 | `file_contains` | `vm.readFile().includes(content)` | Format: `filename::content` |
-| `dir_with_file` | `find -mindepth 2 -maxdepth 2` | Shell cmd via execCommand |
-| `any_file_contains` | `grep -rl 'text' /home/student` | Shell cmd via execCommand |
+| `dir_with_file` | subdir containing a regular file | Host-side 9p inode walk (no shell cmds) |
+| `any_file_contains` | recursive content search | Host-side 9p inode walk (no shell cmds) |
 
 Filesystem types always validate (even empty stdout). Output types skip on empty Enter.
 
@@ -126,7 +127,11 @@ const origDisplay = this.sentinel.onDisplay;
 this.sentinel.onDisplay = () => {};     // Mute
 try { /* validation/seeding */ } finally { this.sentinel.onDisplay = origDisplay; }
 ```
-Combined with `skipNextCapture()` for internal commands and 600ms post-validation wait.
+Combined with `skipNextCapture()` for internal commands. Internal prompt kicks
+(`refreshPrompt`, terminal-size sync) wait on `sentinel.waitForCommand()` with a
+1200ms timeout; on timeout they call `cancelPendingSkip()` + `recoverMuteAfterTimeout()`
+so a full-screen program (vi/less) can't leave the display muted or leak skip slots.
+Both are gated on `terminalPane.isInputIdle` so a fast typist's input is never swallowed.
 
 ## Lesson Format
 
@@ -156,8 +161,17 @@ Metadata in `public/lessons/metadata.json`:
 
 1. Add the `.md` file in `public/lessons/`
 2. Add an entry to `metadata.json` with matching id, file, xp, exercise_count
+   (`xp` must equal the sum of the exercise blocks' xp; `exercise_count` the block count)
 3. Embed exercise blocks as `<!-- exercise ... -->` HTML comments in the markdown
 4. Use `sandbox_setup` array for file/directory creation needed by the exercise
+   (runs at every lesson load, POSIX `sh`, so keep it idempotent — no brace expansion)
+5. If a later exercise depends on state an earlier exercise's SOLUTION creates
+   (files, git commits), give the earlier exercise a `solution_setup` array that
+   recreates that state — it is replayed at lesson load only for already-completed
+   exercises, so progress survives a page reload (the VM always boots pristine)
+6. Exercise `expected` regexes are JS `RegExp` — no Python syntax like `(?P<name>)`
+7. Don't write exercises that need real network (the VM is loopback-only);
+   sshd (:22) and nginx (:80) run locally, and lab hostnames resolve via /etc/hosts
 
 ## Deployment
 
@@ -169,8 +183,19 @@ Metadata in `public/lessons/metadata.json`:
 ## Key Constraints
 
 - **32-bit only:** v86 emulates i386 — no 64-bit binaries, use Alpine i386
-- **Alpine 3.18.6:** Use this version; 3.19.x has 9p filesystem bugs with v86
-- **Serial timing:** Byte-by-byte output with 4ms flush timer; validation needs 600ms wait
-- **9p limitations:** Flat file format, no symlinks, no hardlinks, no live mount syncing
+- **Alpine 3.21 + GNU userland:** rootfs is `i386/alpine:3.21` with GNU
+  coreutils/grep/sed/gawk/findutils/diffutils installed (see `build/build-rootfs.sh`) —
+  reason about GNU output formats, not busybox
+- **Root autologin:** the serial session is root (inittab agetty autologin) with a
+  cosmetic `student@clitutor` prompt and `HOME=/home/student` set by the bashrc;
+  if the tutor shell dies, inittab respawns a bare shell and `LinuxVM.checkRespawn`
+  re-sources the bashrc automatically
+- **No network:** `networkRelay` is null — loopback only; sshd and nginx run locally
+- **Serial timing:** Byte-by-byte output with 4ms flush timer
+- **9p limitations:** Flat file format, no hardlinks, no live mount syncing
+  (symlinks DO work at runtime); v86's `read_file()` rejects for zero-byte files —
+  use `SearchPath` for existence checks
 - **No SIGWINCH:** Terminal resize over serial requires `stty rows N cols M` workaround
 - **SharedArrayBuffer:** Requires COOP/COEP headers; won't work without them
+- **v86 `read_file` empty-file quirk and `exit`-guard:** see `src/vm/linux-vm.ts` and
+  `src/vm/bashrc.ts` before touching filesystem checks or the sentinel machinery

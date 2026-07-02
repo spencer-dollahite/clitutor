@@ -14,8 +14,20 @@ export class TerminalPane {
   /** Callback for slash commands (e.g., /hint, /reset). */
   onSlashCommand: ((cmd: string) => void) | null = null;
 
+  /**
+   * Only these first tokens are intercepted as app commands. Anything else
+   * starting with `/` (absolute paths like /bin/pwd, `/pattern` searches in
+   * vi/less) is forwarded to the guest shell untouched.
+   */
+  private static readonly SLASH_COMMANDS = new Set([
+    "/help", "/lessons", "/lesson", "/hint", "/skip",
+    "/reset", "/status", "/sidebar", "/close", "/back",
+  ]);
+
   /** Buffer for detecting slash commands. */
   private inputBuffer = "";
+  /** True while consuming an ANSI escape sequence (arrows, bracketed paste). */
+  private escPending = false;
   private lastCols = 0;
   private lastRows = 0;
 
@@ -75,9 +87,20 @@ export class TerminalPane {
     this.terminal.onData((data) => {
       // Track input for slash command detection
       for (const ch of data) {
+        // Consume ANSI escape sequences (arrow keys, bracketed paste markers)
+        // so they don't pollute the slash-command buffer.
+        if (this.escPending) {
+          if (/[a-zA-Z~]/.test(ch)) this.escPending = false;
+          continue;
+        }
+        if (ch === "\x1b") {
+          this.escPending = true;
+          continue;
+        }
         if (ch === "\r" || ch === "\n") {
           const stripped = this.inputBuffer.trim();
-          if (stripped.startsWith("/") && this.onSlashCommand) {
+          const firstWord = stripped.split(/\s+/)[0]?.toLowerCase() ?? "";
+          if (TerminalPane.SLASH_COMMANDS.has(firstWord) && this.onSlashCommand) {
             // Don't send slash commands to the VM shell.
             // Clear the current input line only; App controls any prompt refresh
             // needed for the slash command lifecycle.

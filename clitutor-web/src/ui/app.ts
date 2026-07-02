@@ -44,6 +44,8 @@ export class App {
   private sidebarMode: "lessons" | "content" = "lessons";
   private validating = false;
   private seeding = false;
+  /** Shell cwd after the previous command (look-around detection for cwd_regex). */
+  private lastShellCwd = "/home/student";
   private serialSuppressed = false;
   private clearSerialBuffer: (() => void) | null = null;
   private autoFollow = true;
@@ -77,10 +79,20 @@ export class App {
   }
 
   async start(): Promise<void> {
-    // Init progress DB and load lesson metadata — no VM boot yet
-    await this.progress.init();
+    // Init progress DB and load lesson metadata — no VM boot yet.
+    // IndexedDB can be unavailable (private browsing, locked-down machines);
+    // the tutorial itself doesn't need persistence, so degrade gracefully.
+    try {
+      await this.progress.init();
+    } catch (err) {
+      console.warn("[App] IndexedDB unavailable — progress will not persist:", err);
+      showToast("Storage unavailable — progress won't be saved this session", "info");
+    }
     this.autoFollow = localStorage.getItem(App.AUTO_FOLLOW_KEY) !== "false";
     this.lessonsMeta = await this.loader.loadMetadata();
+    this.progress.setExerciseCounts(
+      Object.fromEntries(this.lessonsMeta.map((m) => [m.id, m.exercise_count])),
+    );
 
     // Show the lesson picker as the landing screen
     this.showPicker();
@@ -128,35 +140,51 @@ export class App {
 
     try {
       await this.bootVM();
+
+      // Pre-load lesson and seed files while overlay is still showing.
+      // seedLessonSetup enables byte-level serial suppression.
+      const lesson = await this.loader.loadLesson(meta);
+      await this.seedLessonSetup(lesson);
+
+      // Freeze the sentinel before lifting serial suppression.  The seed
+      // script's final PROMPT_COMMAND (CMD_END + CMD_START) may still be in
+      // the serial pipeline — freeze silently absorbs it without consuming
+      // skipCaptures slots that refreshPrompt needs later.
+      this.sentinel.freeze();
+      this.clearSerialBuffer?.();
+      this.terminalPane?.term.clear();
+      this.serialSuppressed = false;
+      this.seeding = false;
+      this.restoreDisplay();
+
+      // VM is ready — hide boot overlay, focus terminal
+      this.hideBootOverlay();
+      this.terminalPane?.focus();
+
+      // Set up lesson UI (pass pre-loaded lesson to skip re-seeding).
+      // openLessonByMeta sends a prompt-kick (\n) so we don't need another here.
+      await this.openLessonByMeta(meta, lesson);
+      this.deferTerminalSizeSync = false;
     } catch (err) {
-      console.error("[App] VM boot failed:", err);
-      throw err;
+      // A failed asset/lesson fetch used to leave the student staring at a
+      // frozen boot overlay forever. Recover to the picker with a message.
+      console.error("[App] lesson entry failed:", err);
+      this.hideBootOverlay();
+      this.seeding = false;
+      this.serialSuppressed = false;
+      this.deferTerminalSizeSync = false;
+      try {
+        this.vm?.destroy();
+      } catch { /* already dead */ }
+      this.vm = null;
+      this.validator = null;
+      this.sentinel.reset();
+      showToast(
+        `Failed to load lesson: ${err instanceof Error ? err.message : String(err)}`,
+        "error",
+      );
+      this.showPicker();
     }
-
-    // Pre-load lesson and seed files while overlay is still showing.
-    // seedLessonSetup enables byte-level serial suppression.
-    const lesson = await this.loader.loadLesson(meta);
-    await this.seedLessonSetup(lesson);
-
-    // Freeze the sentinel before lifting serial suppression.  The seed
-    // script's final PROMPT_COMMAND (CMD_END + CMD_START) may still be in
-    // the serial pipeline — freeze silently absorbs it without consuming
-    // skipCaptures slots that refreshPrompt needs later.
-    this.sentinel.freeze();
-    this.clearSerialBuffer?.();
-    this.terminalPane?.term.clear();
-    this.serialSuppressed = false;
-    this.seeding = false;
-    this.restoreDisplay();
-
-    // VM is ready — hide boot overlay, focus terminal
-    this.hideBootOverlay();
-    this.terminalPane?.focus();
-
-    // Set up lesson UI (pass pre-loaded lesson to skip re-seeding).
-    // openLessonByMeta sends a prompt-kick (\n) so we don't need another here.
-    await this.openLessonByMeta(meta, lesson);
-    this.deferTerminalSizeSync = false;
   }
 
   private backToPicker(): void {
@@ -405,6 +433,15 @@ export class App {
     this.sentinel.onDisplay = (text) => this.terminalPane?.write(text);
     this.sentinel.onCommand = (result) => this.handleCommand(result);
 
+    // If the student escapes the tutor shell (exit slips through), the VM
+    // re-sources the bashrc; absorb that command's sentinel and tell them.
+    this.vm.onShellRespawn = () => {
+      this.sentinel.skipNextCapture();
+      this.sentinel.queueSystemMessage(
+        "Shell restarted — sandbox re-initialized. Your exercise is still active.",
+      );
+    };
+
     // Boot VM with serial output flowing to sentinel parser
     let buffer = "";
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -479,6 +516,13 @@ export class App {
       console.log("[prompt-refresh] skip (already in flight): %s", reason);
       return;
     }
+    if (!(this.terminalPane?.isInputIdle ?? true)) {
+      // Student is mid-keystroke: injecting a \n would submit their
+      // half-typed command invisibly. Skip the kick; the next CMD_START
+      // clears any stale display state.
+      console.log("[prompt-refresh] skip (input busy): %s", reason);
+      return;
+    }
     this.promptRefreshInFlight = true;
     console.log("[prompt-refresh] start: %s", reason);
     this.sentinel.muteUntilNextPrompt();
@@ -504,7 +548,8 @@ export class App {
       ]);
     } finally {
       if (timedOut) {
-        console.warn("[prompt-refresh] timeout waiting for CMD_END; recovering mute");
+        console.warn("[prompt-refresh] timeout waiting for CMD_END; recovering mute + skip");
+        this.sentinel.cancelPendingSkip();
         this.sentinel.recoverMuteAfterTimeout();
       }
       this.promptRefreshInFlight = false;
@@ -531,12 +576,19 @@ export class App {
       console.log("[handleCommand] SKIP: no currentLesson");
       return;
     }
-    if (this.currentExercise >= this.currentLesson.exercises.length) {
+    // Track the shell cwd across commands (used to detect look-around
+    // commands for cwd_regex exercises). Capture the lesson reference so a
+    // lesson switch during async validation can't record progress under the
+    // wrong lesson.
+    const prevCwd = this.lastShellCwd;
+    this.lastShellCwd = result.cwd;
+    const lesson = this.currentLesson;
+    if (this.currentExercise >= lesson.exercises.length) {
       console.log("[handleCommand] SKIP: currentExercise=%d >= exercises.length=%d",
-        this.currentExercise, this.currentLesson.exercises.length);
+        this.currentExercise, lesson.exercises.length);
       return;
     }
-    const exercise = this.currentLesson.exercises[this.currentExercise];
+    const exercise = lesson.exercises[this.currentExercise];
     console.log("[handleCommand] exercise: id=%s title=%s validation_type=%s completed=%s attempts=%d",
       exercise.id, exercise.title, exercise.validation_type, exercise.completed, exercise.attempts);
     if (exercise.completed) {
@@ -547,10 +599,18 @@ export class App {
     // Skip empty Enter presses for non-filesystem validations (no command was run).
     // Filesystem-based validations (file_exists, dir_with_file, etc.) still run
     // because commands like `mkdir` produce no output but change state.
-    if (!result.stdout.trim() && result.returncode === 0) {
+    if (!result.stdout.trim()) {
       const vt = exercise.validation_type;
-      if (vt === "output_equals" || vt === "output_contains" || vt === "output_regex" || vt === "exit_code") {
-        console.log("[handleCommand] SKIP: empty stdout + rc=0 for validation_type=%s", vt);
+      // Empty output can never satisfy an output-based check, and rc alone
+      // is unreliable here: Ctrl+C (130), Ctrl+Z (148), and an empty Enter
+      // after a failed command (stale $?) all produce empty output. Don't
+      // burn an attempt / first-try bonus on any of them.
+      if (vt === "output_equals" || vt === "output_contains" || vt === "output_regex") {
+        console.log("[handleCommand] SKIP: empty stdout for validation_type=%s (rc=%d)", vt, result.returncode);
+        return;
+      }
+      if (vt === "exit_code" && (result.returncode === 0 || result.returncode === 130 || result.returncode === 148)) {
+        console.log("[handleCommand] SKIP: empty stdout + rc=%d for exit_code", result.returncode);
         return;
       }
     }
@@ -573,12 +633,22 @@ export class App {
       this.validating = false;
     }
 
+    // Lesson switched while validation was in flight — discard the result
+    // rather than recording it under the new lesson.
+    if (this.currentLesson !== lesson) {
+      console.log("[handleCommand] SKIP: lesson changed during validation");
+      return;
+    }
+
     // Mute stale serial display bytes (old prompt remnants still in the
     // pipeline) until the next CMD_START sentinel.  System messages bypass
     // this mute — they go through displayQueue, not the serial display path.
     // The \n kick at the end triggers PROMPT_COMMAND → CMD_END (skipped) →
     // CMD_START (clears mute) → fresh PS1 prompt renders cleanly.
-    this.sentinel.muteUntilNextPrompt();
+    // Only when the input line is idle: muting + kicking while the student
+    // types would swallow their keystrokes and submit a half-typed command.
+    const inputIdle = this.terminalPane?.isInputIdle ?? true;
+    if (inputIdle) this.sentinel.muteUntilNextPrompt();
 
     if (validation.passed) {
       console.log("[handleCommand] PASSED! Marking exercise %s as completed, advancing from %d",
@@ -592,7 +662,7 @@ export class App {
       );
 
       await this.progress.recordExercise(
-        this.currentLesson.id,
+        lesson.id,
         exercise.id,
         xp,
         exercise.attempts,
@@ -603,14 +673,25 @@ export class App {
       this.sentinel.queueSystemMessage(`\u2713 ${exercise.title} — +${xp} XP`);
 
       this.currentExercise++;
+      // Past the end but incomplete exercises remain (student used /skip):
+      // cycle back so skipped work stays reachable instead of orphaned.
+      if (this.currentExercise >= lesson.exercises.length) {
+        const firstIncomplete = lesson.exercises.findIndex((e) => !e.completed);
+        if (firstIncomplete !== -1) {
+          this.currentExercise = firstIncomplete;
+          this.sentinel.queueSystemMessage(
+            `Returning to skipped exercise: ${lesson.exercises[firstIncomplete].title}`,
+          );
+        }
+      }
       console.log("[handleCommand] currentExercise now=%d (total=%d)",
-        this.currentExercise, this.currentLesson.exercises.length);
+        this.currentExercise, lesson.exercises.length);
       this.updateExerciseBar();
       this.updateStatusBar();
       document.dispatchEvent(new CustomEvent("xp-updated"));
 
-      if (this.currentExercise < this.currentLesson.exercises.length) {
-        const next = this.currentLesson.exercises[this.currentExercise];
+      if (this.currentExercise < lesson.exercises.length) {
+        const next = lesson.exercises[this.currentExercise];
         this.sentinel.queueSystemMessage(`Next: ${next.title}`);
         this.autoScrollToExercise();
         if (this.tts.getAutoRead()) {
@@ -618,10 +699,20 @@ export class App {
         }
       } else {
         this.sentinel.queueSystemMessage(
-          `\u2605 Lesson complete: ${this.currentLesson.title}! Type /lessons for more.`,
+          `\u2605 Lesson complete: ${lesson.title}! Type /lessons for more.`,
         );
-        showToast(`Lesson complete: ${this.currentLesson.title}!`, "success");
+        showToast(`Lesson complete: ${lesson.title}!`, "success");
       }
+    } else if (
+      exercise.validation_type === "cwd_regex" &&
+      result.stdout.trim() &&
+      result.cwd === prevCwd
+    ) {
+      // Look-around command (ls, cat, ...) during a cwd_regex exercise: the
+      // student is exploring, not attempting. Don't count the attempt,
+      // don't forfeit the first-try bonus, don't nag.
+      console.log("[handleCommand] cwd_regex look-around (cwd unchanged) \u2014 not counted");
+      exercise.attempts--;
     } else {
       console.log("[handleCommand] FAILED: exercise=%s message=%s", exercise.id, validation.message);
       exercise.first_try = false;
@@ -629,7 +720,9 @@ export class App {
     }
 
     // Kick a fresh prompt so the user sees a usable prompt below system messages.
-    await this.refreshPrompt("exercise-validation");
+    if (inputIdle) {
+      await this.refreshPrompt("exercise-validation");
+    }
   }
 
   // ── Slash commands ────────────────────────────────────────────────
@@ -803,17 +896,16 @@ export class App {
       const lesson = preloaded ?? await this.loader.loadLesson(meta);
       this.currentLesson = lesson;
 
-    // Restore progress — currentExercise advances past completed exercises.
-    // When all are done, currentExercise = length which the exercise bar
-    // and handleCommand both handle correctly (showing "All exercises complete!").
-    this.currentExercise = 0;
-    for (let i = 0; i < lesson.exercises.length; i++) {
-      const ex = lesson.exercises[i];
-      if (this.progress.isExerciseCompleted(lesson.id, ex.id)) {
-        ex.completed = true;
-        this.currentExercise = i + 1;
-      }
+    // Restore progress — resume at the FIRST uncompleted exercise (not
+    // max(completed)+1) so exercises skipped in a previous session stay
+    // reachable. When all are done, currentExercise = length which the
+    // exercise bar and handleCommand both handle correctly.
+    for (const ex of lesson.exercises) {
+      ex.completed = this.progress.isExerciseCompleted(lesson.id, ex.id);
     }
+    const firstIncomplete = lesson.exercises.findIndex((e) => !e.completed);
+    this.currentExercise = firstIncomplete === -1 ? lesson.exercises.length : firstIncomplete;
+    this.lastShellCwd = "/home/student";
 
     // Seed lesson files silently when switching lessons (not pre-seeded).
     // seedLessonSetup enables byte-level suppression — lift after clear.
@@ -949,6 +1041,16 @@ export class App {
         commands.push("cd /home/student");
         commands.push(...ex.sandbox_setup);
       }
+      // Replay the side effects of already-completed exercises so later
+      // exercises that build on them survive a page reload (the VM always
+      // boots pristine from the snapshot).
+      if (
+        ex.solution_setup && ex.solution_setup.length > 0 &&
+        this.progress.isExerciseCompleted(lesson.id, ex.id)
+      ) {
+        commands.push("cd /home/student");
+        commands.push(...ex.solution_setup);
+      }
     }
     if (commands.length === 0) return;
 
@@ -978,6 +1080,7 @@ export class App {
     const deadline = Date.now() + 10000;
     while (Date.now() < deadline) {
       await new Promise<void>(r => setTimeout(r, 50));
+      if (!this.vm) break; // /back destroyed the VM mid-seed
       if (!(await this.vm.fileExists("/tmp/_clitutor_seed.sh"))) break;
     }
 
@@ -1001,16 +1104,27 @@ export class App {
 
   private skipExercise(): void {
     if (!this.currentLesson || this.currentExercise >= this.currentLesson.exercises.length) return;
+    const exercises = this.currentLesson.exercises;
     this.sentinel.queueSystemMessage(
-      `Skipped: ${this.currentLesson.exercises[this.currentExercise].title}`,
+      `Skipped: ${exercises[this.currentExercise].title}`,
     );
-    this.currentExercise++;
+
+    // Advance to the next uncompleted exercise, wrapping around so skipped
+    // exercises remain reachable (they used to be orphaned forever).
+    let next = -1;
+    for (let i = 1; i <= exercises.length; i++) {
+      const idx = (this.currentExercise + i) % exercises.length;
+      if (!exercises[idx].completed) {
+        next = idx;
+        break;
+      }
+    }
+    this.currentExercise = next === -1 ? exercises.length : next;
     this.updateExerciseBar();
     this.autoScrollToExercise();
 
-    if (this.currentExercise < this.currentLesson.exercises.length) {
-      const next = this.currentLesson.exercises[this.currentExercise];
-      this.sentinel.queueSystemMessage(`Next: ${next.title}`);
+    if (this.currentExercise < exercises.length) {
+      this.sentinel.queueSystemMessage(`Next: ${exercises[this.currentExercise].title}`);
     }
   }
 
@@ -1094,6 +1208,26 @@ export class App {
     this.vm.sendSerial(
       ` stty rows ${rows} cols ${cols} >/dev/null 2>&1; export LINES=${rows} COLUMNS=${cols}\n`,
     );
+
+    // Recovery: if no CMD_END arrives (e.g. a full-screen program like vi is
+    // in the foreground, where PROMPT_COMMAND never fires), unmute and undo
+    // the armed skip — otherwise the display stays frozen until the program
+    // exits and the next real command's validation is silently swallowed.
+    void (async () => {
+      let timedOut = false;
+      await Promise.race([
+        this.sentinel.waitForCommand(),
+        new Promise<void>((resolve) => setTimeout(() => {
+          timedOut = true;
+          resolve();
+        }, 1200)),
+      ]);
+      if (timedOut) {
+        console.warn("[terminal-size] timeout waiting for CMD_END; recovering mute + skip");
+        this.sentinel.cancelPendingSkip();
+        this.sentinel.recoverMuteAfterTimeout();
+      }
+    })();
   }
 
   private consumePendingSizeSync(): { cols: number; rows: number } | null {

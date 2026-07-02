@@ -256,7 +256,7 @@ xp: 15
 difficulty: 2
 sandbox_setup:
   - "mkdir -p .ssh"
-  - "ssh-keygen -t ed25519 -f .ssh/shore_key -N '' -q"
+  - "[ -f .ssh/shore_key ] || ssh-keygen -t ed25519 -f .ssh/shore_key -N '' -q"
 validation_type: output_contains
 expected: ssh-ed25519
 hints:

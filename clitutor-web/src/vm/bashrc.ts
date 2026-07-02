@@ -46,9 +46,19 @@ HISTSIZE=1000
 __clitutor_prompt_cmd() {
     local rc=$?
     printf '\\x1f${CMD_END_SENTINEL}:%d:%s\\x1f' "$rc" "$PWD"
-    _cwd=$PWD
-    case "$_cwd" in "$HOME"*) _cwd="~\${_cwd#$HOME}";; esac
-    PS1="\${_esc}[01;32m${user}@${hostname}\${_esc}[00m:\${_esc}[01;34m$_cwd\${_esc}[00m\\$ "
+    # Rebuild PS1 only while the student hasn't customized it — once PS1
+    # differs from the last value we wrote, leave it alone permanently so
+    # prompt-customization lessons visibly work.
+    if [ -z "$__clitutor_custom_ps1" ]; then
+        if [ -n "$__clitutor_last_ps1" ] && [ "$PS1" != "$__clitutor_last_ps1" ]; then
+            __clitutor_custom_ps1=1
+        else
+            _cwd=$PWD
+            case "$_cwd" in "$HOME"*) _cwd="~\${_cwd#$HOME}";; esac
+            PS1="\${_esc}[01;32m${user}@${hostname}\${_esc}[00m:\${_esc}[01;34m$_cwd\${_esc}[00m\\$ "
+            __clitutor_last_ps1=$PS1
+        fi
+    fi
     printf '\\x1f${CMD_START_SENTINEL}\\x1f'
 }
 PROMPT_COMMAND="__clitutor_prompt_cmd"
@@ -60,6 +70,12 @@ ${blockedFuncs}
 
 # Prevent accidental Ctrl+D shell exit
 set -o ignoreeof
+
+# Leaving this shell would drop to a bare root console with no tutor
+# machinery; block interactive exit (scripts/subshells are unaffected —
+# functions are not inherited by non-interactive shells).
+exit() { echo "exit: leaving the tutor shell is disabled here. Use /back for the lesson menu."; return 1; }
+logout() { exit; }
 
 # No history file in sandbox
 unset HISTFILE

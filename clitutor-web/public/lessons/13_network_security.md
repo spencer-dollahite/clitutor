@@ -72,8 +72,8 @@ validation_type: output_regex
 expected: "nginx|OpenSSH"
 hints:
   - "Add version detection to your nmap scan."
-  - "Use -sV along with -sT to probe service banners."
-  - "Type: `nmap -sV -sT localhost`"
+  - "Use -sV along with -sT to probe service banners. Limit ports with -p 22,80 — version probing every port is slow in the emulated VM."
+  - "Type: `nmap -sV -sT -p 22,80 localhost`"
 -->
 ### Exercise 2: Detect service versions
 Scan localhost with version detection to identify the software running on each

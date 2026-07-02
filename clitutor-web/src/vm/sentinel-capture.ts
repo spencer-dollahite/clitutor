@@ -64,10 +64,10 @@ export class SentinelCapture {
   private mutedByteCount = 0;
 
   /**
-   * Resolve function for waitForCommand().  Set when a caller is waiting for
-   * the next CMD_END sentinel to signal shell command completion.
+   * Resolve functions for waitForCommand().  Set when callers are waiting
+   * for the next CMD_END sentinel to signal shell command completion.
    */
-  private commandWaiter: (() => void) | null = null;
+  private commandWaiters: (() => void)[] = [];
 
   onCommand: CommandCallback | null = null;
   onDisplay: DisplayCallback | null = null;
@@ -243,13 +243,13 @@ export class SentinelCapture {
     console.log("[SentinelCapture] finishCapture: exitCode=%d skipCaptures=%d rawChunks=%d ready=%s",
       exitCode, this.skipCaptures, rawChunks.length, this.ready);
 
-    // Resolve any pending waitForCommand() caller.  This fires for every
+    // Resolve any pending waitForCommand() callers.  This fires for every
     // CMD_END — both skipped (internal) and real commands — which is correct
-    // because the waiter just needs to know the shell finished *something*.
-    if (this.commandWaiter) {
-      const resolve = this.commandWaiter;
-      this.commandWaiter = null;
-      resolve();
+    // because the waiters just need to know the shell finished *something*.
+    if (this.commandWaiters.length > 0) {
+      const waiters = this.commandWaiters;
+      this.commandWaiters = [];
+      for (const resolve of waiters) resolve();
     }
 
     // Frozen: silently discard WITHOUT consuming skipCaptures slots.
@@ -392,8 +392,20 @@ export class SentinelCapture {
    */
   waitForCommand(): Promise<void> {
     return new Promise((resolve) => {
-      this.commandWaiter = resolve;
+      this.commandWaiters.push(resolve);
     });
+  }
+
+  /**
+   * Undo one armed skipNextCapture() slot. Call when an internal command
+   * timed out without producing a CMD_END — otherwise the leaked slot
+   * silently swallows the student's next real command's validation.
+   */
+  cancelPendingSkip(): void {
+    if (this.skipCaptures > 0) this.skipCaptures--;
+    if (this.pendingMutedSkips > 0) this.pendingMutedSkips--;
+    console.warn("[SentinelCapture] cancelPendingSkip: skipCaptures=%d pendingMutedSkips=%d",
+      this.skipCaptures, this.pendingMutedSkips);
   }
 
   /** Increment skip counter (e.g., for empty commands from slash command handling). */
@@ -417,7 +429,7 @@ export class SentinelCapture {
     this.muteSerial = false;
     this.frozen = false;
     this.pendingMutedSkips = 0;
-    this.commandWaiter = null;
+    this.commandWaiters = [];
     this.pendingMessages = [];
     this.displayQueue = [];
     this.partialBuffer = "";

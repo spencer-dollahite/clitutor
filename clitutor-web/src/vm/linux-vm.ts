@@ -57,6 +57,14 @@ export class LinuxVM {
   private bootResolve: (() => void) | null = null;
   private serialText = "";
   private bashrcInstalled = false;
+  private respawnArmed = false;
+
+  /**
+   * Fired when the tutor shell died (student escaped via exit/Ctrl+D) and a
+   * respawned bare shell was detected + re-initialized. The app should skip
+   * the re-source command's sentinel and notify the student.
+   */
+  onShellRespawn: (() => void) | null = null;
 
   constructor(opts: LinuxVMOptions = {}) {
     this.opts = { ...DEFAULT_OPTS, ...opts };
@@ -135,6 +143,7 @@ export class LinuxVM {
         this.serialText = this.serialText.slice(-200);
       }
       this.checkReady();
+      this.checkRespawn();
     });
 
     // When restoring from snapshot, the shell is idle — send Enter to
@@ -197,11 +206,46 @@ export class LinuxVM {
     // Mark VM as ready (used by generate-state.mjs)
     (window as any).__vmReady = true;
 
+    // Arm respawn detection once the bashrc source has settled; clear the
+    // rolling serial text so pre-install login banners can't false-trigger.
+    setTimeout(() => {
+      this.serialText = "";
+      this.respawnArmed = true;
+    }, 1500);
+
     // Resolve the waitForShell promise after bashrc takes effect
     if (this.bootResolve) {
       const resolve = this.bootResolve;
       this.bootResolve = null;
       setTimeout(() => resolve(), 800);
+    }
+  }
+
+  /**
+   * Detect the tutor shell dying: inittab respawns a bare root agetty shell
+   * (auto-login banner, `localhost:~#` prompt) that has none of the sentinel
+   * machinery. Re-source the bashrc so validation keeps working.
+   */
+  private checkRespawn(): void {
+    if (!this.bashrcInstalled || !this.respawnArmed) return;
+    // Trigger ONLY on the respawned shell's bare prompt — the "(automatic
+    // login)" banner appears earlier, while login(1) still flushes tty
+    // input, so anything sent then would be discarded. Readline emits CSI
+    // sequences (bracketed-paste \x1b[?2004h) around the prompt — observed
+    // stream: "...\r\n\x1b[?2004hlocalhost:~# " — so allow escapes on both
+    // sides of the prompt text.
+    const CSI = "(\\x1b\\[[0-9?;]*[a-zA-Z])*";
+    if (new RegExp(`(^|\\n)${CSI}(localhost|clitutor):~# ${CSI}$`).test(this.serialText)) {
+      this.respawnArmed = false;
+      this.serialText = "";
+      console.warn("[LinuxVM] shell respawn detected — reinstalling sandbox bashrc");
+      this.sendSerial("mkdir -p /home/student; . /root/.clitutor_bashrc 2>/dev/null\n");
+      this.onShellRespawn?.();
+      // Re-arm after the re-source settles
+      setTimeout(() => {
+        this.serialText = "";
+        this.respawnArmed = true;
+      }, 1500);
     }
   }
 

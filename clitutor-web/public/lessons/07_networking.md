@@ -142,19 +142,23 @@ dig example.com MX                # mail records
 
 <!-- exercise
 id: ex04
-title: Look up a domain
+title: Resolve a hostname
 xp: 15
 difficulty: 2
 sandbox_setup: null
 validation_type: output_regex
-expected: "\\d+\\.\\d+\\.\\d+\\.\\d+"
+expected: "127\\.0\\.0\\.1"
 hints:
-  - "Use a DNS lookup tool to resolve a domain name."
-  - "nslookup is a simple DNS query tool."
-  - "Type: `nslookup example.com`"
+  - "This sandboxed VM has no internet, so public DNS times out — resolve a LAB host instead."
+  - "getent hosts <name> shows how the system resolves a hostname (including /etc/hosts entries)."
+  - "Type: `getent hosts gateway.fleet.mil`"
 -->
-### Exercise 4: Look up a domain
-Perform a DNS lookup for `example.com`.
+### Exercise 4: Resolve a hostname
+Resolve the lab host `gateway.fleet.mil` to its IP address.
+
+> **Note:** This VM is offline — querying public DNS (`nslookup example.com`)
+> will fail with *network unreachable*. Lab hosts resolve locally through
+> `/etc/hosts`, which is always consulted before DNS.
 
 ---
 

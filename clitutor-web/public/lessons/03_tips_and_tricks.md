@@ -36,6 +36,8 @@ title: Enter your incident workspace
 xp: 8
 difficulty: 1
 sandbox_setup: null
+solution_setup:
+  - "mkdir -p incident"
 validation_type: cwd_regex
 expected: "/incident$"
 hints:
@@ -56,6 +58,9 @@ title: Create triage checklists quickly
 xp: 8
 difficulty: 1
 sandbox_setup: null
+solution_setup:
+  - "mkdir -p incident/checklists"
+  - "touch incident/checklists/network.txt incident/checklists/auth.txt incident/checklists/dns.txt"
 validation_type: file_exists
 expected: incident/checklists/auth.txt
 hints:
